@@ -1,0 +1,16 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),ts=require('typescript');
+const api={};vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/repeat-decisions.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:api});
+const c=(id,patch={})=>({id,type:'name',value:'김서준',method:'full',mask:[],confirmed:false,locationResolved:true,...patch});
+const a=c('a'),b=c('b'),other=c('other',{value:'이서준'}),otherType=c('type',{type:'management_id'}),explicit=c('explicit',{method:'keep',confirmed:true}),automatic=c('automatic',{confirmed:true,decisionSource:'ai_automatic'});
+const all=[a,other,b,otherType,explicit,automatic];
+const ids=xs=>Array.from(xs,x=>x.id);
+assert.deepEqual(ids(api.followingTargets(a,all)),['a','b','automatic']);
+assert.deepEqual(ids(api.repeatedReviewOrder(all)),['a','b','explicit','automatic','other','type']);
+assert.equal(api.previousChoice(a,all).id,'explicit');
+assert.equal(api.previousChoice(explicit,all),undefined);
+assert.equal(api.previousChoice(a,[...all,c('conflict',{confirmed:true,method:'partial',mask:[[1,3]]})]),undefined);
+assert.equal(api.previousChoice(a,[a,automatic]),undefined,'Automatic choices are not human precedent');
+assert.equal(api.previousChoice(a,[a,c('different',{value:'김 서준',confirmed:true,method:'keep'})]),undefined);
+assert.deepEqual(ids(api.followingTargets(explicit,all)),['a','b','explicit','automatic']);
+assert.deepEqual(ids(all),['a','other','b','type','explicit','automatic'],'Helpers never reorder or mutate source');
+console.log('Repeated-value targets, all-occurrence order, explicit overrides, conflict guard, exact type/value matching: passed');

@@ -1,0 +1,259 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+  --ui-primary: #0066cc;
+  --ui-primary-hover: #0054a8;
+  --ui-primary-pressed: #004589;
+  --ui-accent-soft: #edf4fc;
+  --ui-canvas: #f5f7fa;
+  --ui-surface: #ffffff;
+  --ui-text: #1f3347;
+  --ui-text-secondary: #465b70;
+  --ui-text-muted: #526579;
+  --ui-control-border: #71849a;
+  --ui-divider: #d5dee8;
+  --ui-danger: #b42318;
+  --ui-warning: #8a4b00;
+  --ui-success: #187245;
+  /* 문서의 가림 표현은 UI 액센트와 분리해 기존 표현을 유지합니다. */
+  --ui-document-canvas: #e9edf2;
+  --ui-mask-solid: #17202b;
+  --ui-mask-edit: rgba(15, 23, 42, 0.20);
+  --ui-mask-edit-pdf: rgba(15, 23, 42, 0.22);
+  --ui-mask-edit-sample: rgba(0, 0, 0, 0.18);
+}
+
+@theme {
+  /* 기존 brand/blue 클래스가 같은 의미 색상을 사용하도록 연결합니다. */
+  --color-blue-50: var(--ui-accent-soft);
+  --color-blue-100: #deecfa;
+  --color-blue-200: #b9d3ef;
+  --color-blue-300: #82b5e5;
+  --color-blue-400: #2675c4;
+  --color-blue-500: var(--ui-primary);
+  --color-blue-600: var(--ui-primary);
+  --color-blue-700: var(--ui-primary-hover);
+  --color-blue-800: var(--ui-primary-pressed);
+  --color-blue-900: #073b70;
+  --color-brand-50: var(--color-blue-50);
+  --color-brand-100: var(--color-blue-100);
+  --color-brand-200: var(--color-blue-200);
+  --color-brand-300: var(--color-blue-300);
+  --color-brand-400: var(--color-blue-400);
+  --color-brand-500: var(--ui-primary);
+  --color-brand-600: var(--ui-primary-hover);
+  --color-brand-700: var(--ui-primary-pressed);
+  --color-brand-800: var(--color-blue-800);
+  --color-brand-900: var(--color-blue-900);
+
+  /* 본문·작은 도움말·경계를 구분하되 작은 글자의 대비를 유지합니다. */
+  --color-slate-50: var(--ui-canvas);
+  --color-slate-100: #edf1f5;
+  --color-slate-200: var(--ui-divider);
+  --color-slate-300: var(--ui-control-border);
+  --color-slate-400: var(--ui-text-muted);
+  --color-slate-500: var(--ui-text-muted);
+  --color-slate-600: var(--ui-text-secondary);
+  --color-slate-700: #30485f;
+  --color-slate-800: var(--ui-text);
+  --color-slate-900: #12283d;
+
+  /* 마스킹 강조 (개인정보 하이라이트) */
+  --color-mask-50: var(--color-blue-50);
+  --color-mask-100: var(--color-blue-100);
+  --color-mask-200: var(--color-blue-200);
+  --color-mask-300: var(--color-blue-300);
+  --color-mask-400: var(--color-blue-400);
+  --color-mask-500: var(--ui-primary);
+  --color-mask-600: var(--ui-primary);
+  --color-mask-700: var(--ui-primary-hover);
+  --color-mask-800: var(--ui-primary-pressed);
+  --color-mask-900: var(--color-blue-900);
+
+  /* 상태 컬러 */
+  --color-red-50: #fef3f2;
+  --color-red-100: #fee4e2;
+  --color-red-200: #fecdc9;
+  --color-red-300: #e58a81;
+  --color-red-500: var(--ui-danger);
+  --color-red-600: var(--ui-danger);
+  --color-red-700: #8f1d15;
+  --color-amber-50: #fff8e6;
+  --color-amber-200: #ead3a0;
+  --color-amber-300: #bf9348;
+  --color-amber-500: var(--ui-warning);
+  --color-amber-600: var(--ui-warning);
+  --color-amber-700: #743e00;
+  --color-amber-800: #603400;
+  --color-green-50: #f0faf4;
+  --color-green-500: var(--ui-success);
+  --color-green-600: var(--ui-success);
+  --color-success-50: var(--color-green-50);
+  --color-success-500: var(--ui-success);
+  --color-success-600: var(--ui-success);
+  --color-warning-50: var(--color-amber-50);
+  --color-warning-500: var(--ui-warning);
+  --color-warning-600: var(--ui-warning);
+  --color-error-50: var(--color-red-50);
+  --color-error-500: var(--ui-danger);
+  --color-error-600: var(--ui-danger);
+
+  /* 가림 문자 배경 */
+  --color-redact-bg: #1f2937;
+  --color-redact-text: #6b7280;
+
+  /* 커스텀 폰트 */
+  --font-sans: var(--font-noto-sans-kr), "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", monospace;
+
+  /* 그림자 */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-drop: 0 8px 24px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.06);
+  --shadow-elevated: 0 12px 32px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* 기본 스타일 */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--ui-canvas);
+  color: var(--ui-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 문서 내용의 기존 표현은 서비스 UI 팔레트 변경에서 제외합니다.
+   PDF는 원본/저장 사본 이미지 자체를 그대로 표시합니다. */
+[data-testid="document-paper"] {
+  --color-slate-300: oklch(86.9% 0.022 252.894);
+  --color-slate-500: oklch(55.4% 0.046 257.417);
+  color: oklch(27.9% 0.041 260.031);
+}
+
+/* 전체 화면의 상자 모양은 사각형으로 통일합니다.
+   스위치 자체와 내부 손잡이는 각 구성 요소의 기존 곡선을 유지합니다. */
+*:not([role="switch"]):not([role="switch"] *),
+*:not([role="switch"]):not([role="switch"] *)::before,
+*:not([role="switch"]):not([role="switch"] *)::after {
+  border-radius: 0 !important;
+}
+
+/* 커스텀 스크롤바 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-slate-100);
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--ui-control-border);
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ui-text-muted);
+}
+
+/* 텍스트 선택 */
+::selection {
+  background-color: var(--color-brand-200);
+  color: var(--color-brand-900);
+}
+
+/* 포커스 가시성 */
+*:focus-visible {
+  outline: 2px solid var(--ui-primary);
+  outline-offset: 2px;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+textarea,
+select,
+label:has(> select) {
+  border-color: var(--ui-control-border);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--ui-text-muted);
+  opacity: 1;
+}
+
+/* 오래된 옅은 글자 유틸도 경계 색과 분리해 보조 글자 대비를 지킵니다. */
+.text-slate-300 {
+  color: var(--ui-text-muted);
+}
+
+input,
+textarea,
+select {
+  accent-color: var(--ui-primary);
+}
+
+[role="switch"] {
+  border-color: var(--ui-primary);
+}
+
+[role="switch"][aria-checked="false"] {
+  border-color: var(--ui-control-border);
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --ui-text-secondary: #243c54;
+    --ui-text-muted: #30485f;
+    --ui-control-border: #465b70;
+    --ui-divider: #71849a;
+    --ui-primary: #0054a8;
+  }
+}
+
+@media (forced-colors: active) {
+  :root {
+    --ui-primary: LinkText;
+    --ui-primary-hover: LinkText;
+    --ui-primary-pressed: LinkText;
+    --ui-control-border: ButtonText;
+  }
+  *:focus-visible {
+    outline-color: Highlight;
+  }
+  button[aria-pressed="true"],
+  [role="switch"][aria-checked="true"] {
+    outline: 2px solid Highlight;
+    outline-offset: -3px;
+  }
+}
+
+/* 가림 문자 스타일 */
+.redacted {
+  background-color: var(--color-redact-bg);
+  color: var(--color-redact-text);
+  border-radius: 2px;
+  padding: 0 1px;
+  user-select: none;
+}
+
+/* 문서 뷰어 하이라이트 */
+.document-highlight {
+  background-color: var(--color-mask-300);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+/* 드래그 선택 중 */
+.drag-select {
+  background-color: var(--color-mask-200);
+  border: 2px dashed var(--color-mask-500);
+  border-radius: 2px;
+  cursor: crosshair;
+}

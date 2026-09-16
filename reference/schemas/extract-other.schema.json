@@ -1,0 +1,257 @@
+{
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "array",
+      "description": "작성자·참여자·당사자·예금주·가족·제3자. 공개 저자도 먼저 후보로 찾는다. 중점 위치·역할: 전체 본문·표·부록·기타 지원 구조. 문서 전체의 모든 출현을 원문 표기대로 추출한다. 값 생성·계산·정규화 금지. 다른 종류도 제외하지 않는다.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "raw_value": {
+            "type": "string",
+            "description": "가릴 후보 값의 원문 표기. 공백·구분자·대소문자를 그대로 유지."
+          },
+          "role_raw": {
+            "type": "string",
+            "description": "원문에 명시된 항목명·역할. 원문에 없으면 추정하지 않는다."
+          },
+          "context_raw": {
+            "type": "string",
+            "description": "이 출현 위치를 구별할 짧은 주변 원문 또는 표 머리글."
+          }
+        }
+      }
+    },
+    "phone": {
+      "type": "array",
+      "description": "휴대전화·유선·직통·내선·팩스. 대표번호도 역할 근거를 보고 판단한다. 중점 위치·역할: 전체 본문·표·부록·기타 지원 구조. 문서 전체의 모든 출현을 원문 표기대로 추출한다. 값 생성·계산·정규화 금지. 다른 종류도 제외하지 않는다.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "raw_value": {
+            "type": "string",
+            "description": "가릴 후보 값의 원문 표기. 공백·구분자·대소문자를 그대로 유지."
+          },
+          "role_raw": {
+            "type": "string",
+            "description": "원문에 명시된 항목명·역할. 원문에 없으면 추정하지 않는다."
+          },
+          "context_raw": {
+            "type": "string",
+            "description": "이 출현 위치를 구별할 짧은 주변 원문 또는 표 머리글."
+          }
+        }
+      }
+    },
+    "email": {
+      "type": "array",
+      "description": "개인 및 업무용 개인 이메일. 회사 도메인만으로 제외하지 않는다. 중점 위치·역할: 전체 본문·표·부록·기타 지원 구조. 문서 전체의 모든 출현을 원문 표기대로 추출한다. 값 생성·계산·정규화 금지. 다른 종류도 제외하지 않는다.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "raw_value": {
+            "type": "string",
+            "description": "가릴 후보 값의 원문 표기. 공백·구분자·대소문자를 그대로 유지."
+          },
+          "role_raw": {
+            "type": "string",
+            "description": "원문에 명시된 항목명·역할. 원문에 없으면 추정하지 않는다."
+          },
+          "context_raw": {
+            "type": "string",
+            "description": "이 출현 위치를 구별할 짧은 주변 원문 또는 표 머리글."
+          }
+        }
+      }
+    },
+    "address": {
+      "type": "array",
+      "description": "주거·배송·상세 호수·개인 근무 위치. 일반 행사장과 구분한다. 중점 위치·역할: 전체 본문·표·부록·기타 지원 구조. 문서 전체의 모든 출현을 원문 표기대로 추출한다. 값 생성·계산·정규화 금지. 다른 종류도 제외하지 않는다.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "raw_value": {
+            "type": "string",
+            "description": "가릴 후보 값의 원문 표기. 공백·구분자·대소문자를 그대로 유지."
+          },
+          "role_raw": {
+            "type": "string",
+            "description": "원문에 명시된 항목명·역할. 원문에 없으면 추정하지 않는다."
+          },
+          "context_raw": {
+            "type": "string",
+            "description": "이 출현 위치를 구별할 짧은 주변 원문 또는 표 머리글."
+          }
+        }
+      }
+    },
+    "dob": {
+      "type": "array",
+      "description": "개인의 출생 날짜. 문서 작성일·행사일·일반 일정과 구분한다. 중점 위치·역할: 전체 본문·표·부록·기타 지원 구조. 문서 전체의 모든 출현을 원문 표기대로 추출한다. 값 생성·계산·정규화 금지. 다른 종류도 제외하지 않는다.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "raw_value": {
+            "type": "string",
+            "description": "가릴 후보 값의 원문 표기. 공백·구분자·대소문자를 그대로 유지."
+          },
+          "role_raw": {
+            "type": "string",
+            "description": "원문에 명시된 항목명·역할. 원문에 없으면 추정하지 않는다."
+          },
+          "context_raw": {
+            "type": "string",
+            "description": "이 출현 위치를 구별할 짧은 주변 원문 또는 표 머리글."
+          }
+        }
+      }
+    },
+    "resident_id": {
+      "type": "array",
+      "description": "전체·부분 노출·표기 오류 의심 후보. 체크섬 실패만으로 제외하지 않는다. 중점 위치·역할: 전체 본문·표·부록·기타 지원 구조. 문서 전체의 모든 출현을 원문 표기대로 추출한다. 값 생성·계산·정규화 금지. 다른 종류도 제외하지 않는다.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "raw_value": {
+            "type": "string",
+            "description": "가릴 후보 값의 원문 표기. 공백·구분자·대소문자를 그대로 유지."
+          },
+          "role_raw": {
+            "type": "string",
+            "description": "원문에 명시된 항목명·역할. 원문에 없으면 추정하지 않는다."
+          },
+          "context_raw": {
+            "type": "string",
+            "description": "이 출현 위치를 구별할 짧은 주변 원문 또는 표 머리글."
+          }
+        }
+      }
+    },
+    "foreign_id": {
+      "type": "array",
+      "description": "주민등록번호와 별도로 분류한다. 표기 오류와 부분 노출도 후보로 둔다. 중점 위치·역할: 전체 본문·표·부록·기타 지원 구조. 문서 전체의 모든 출현을 원문 표기대로 추출한다. 값 생성·계산·정규화 금지. 다른 종류도 제외하지 않는다.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "raw_value": {
+            "type": "string",
+            "description": "가릴 후보 값의 원문 표기. 공백·구분자·대소문자를 그대로 유지."
+          },
+          "role_raw": {
+            "type": "string",
+            "description": "원문에 명시된 항목명·역할. 원문에 없으면 추정하지 않는다."
+          },
+          "context_raw": {
+            "type": "string",
+            "description": "이 출현 위치를 구별할 짧은 주변 원문 또는 표 머리글."
+          }
+        }
+      }
+    },
+    "passport": {
+      "type": "array",
+      "description": "문서에 여권번호로 기재되거나 해당 역할 근거가 있는 값. 국가·세대별 범위 별도. 중점 위치·역할: 전체 본문·표·부록·기타 지원 구조. 문서 전체의 모든 출현을 원문 표기대로 추출한다. 값 생성·계산·정규화 금지. 다른 종류도 제외하지 않는다.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "raw_value": {
+            "type": "string",
+            "description": "가릴 후보 값의 원문 표기. 공백·구분자·대소문자를 그대로 유지."
+          },
+          "role_raw": {
+            "type": "string",
+            "description": "원문에 명시된 항목명·역할. 원문에 없으면 추정하지 않는다."
+          },
+          "context_raw": {
+            "type": "string",
+            "description": "이 출현 위치를 구별할 짧은 주변 원문 또는 표 머리글."
+          }
+        }
+      }
+    },
+    "driver_license": {
+      "type": "array",
+      "description": "면허 소지자와 연결되는 면허번호. 차량번호·문서번호와 구분한다. 중점 위치·역할: 전체 본문·표·부록·기타 지원 구조. 문서 전체의 모든 출현을 원문 표기대로 추출한다. 값 생성·계산·정규화 금지. 다른 종류도 제외하지 않는다.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "raw_value": {
+            "type": "string",
+            "description": "가릴 후보 값의 원문 표기. 공백·구분자·대소문자를 그대로 유지."
+          },
+          "role_raw": {
+            "type": "string",
+            "description": "원문에 명시된 항목명·역할. 원문에 없으면 추정하지 않는다."
+          },
+          "context_raw": {
+            "type": "string",
+            "description": "이 출현 위치를 구별할 짧은 주변 원문 또는 표 머리글."
+          }
+        }
+      }
+    },
+    "account": {
+      "type": "array",
+      "description": "개인 은행·증권·가상계좌와 예금주 관계. 공용 계좌도 역할 확인 전 제외하지 않는다. 중점 위치·역할: 전체 본문·표·부록·기타 지원 구조. 문서 전체의 모든 출현을 원문 표기대로 추출한다. 값 생성·계산·정규화 금지. 다른 종류도 제외하지 않는다.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "raw_value": {
+            "type": "string",
+            "description": "가릴 후보 값의 원문 표기. 공백·구분자·대소문자를 그대로 유지."
+          },
+          "role_raw": {
+            "type": "string",
+            "description": "원문에 명시된 항목명·역할. 원문에 없으면 추정하지 않는다."
+          },
+          "context_raw": {
+            "type": "string",
+            "description": "이 출현 위치를 구별할 짧은 주변 원문 또는 표 머리글."
+          }
+        }
+      }
+    },
+    "card": {
+      "type": "array",
+      "description": "개인과 연결되는 결제카드 번호. 이미 일부 가린 번호도 후보로 검토한다. 중점 위치·역할: 전체 본문·표·부록·기타 지원 구조. 문서 전체의 모든 출현을 원문 표기대로 추출한다. 값 생성·계산·정규화 금지. 다른 종류도 제외하지 않는다.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "raw_value": {
+            "type": "string",
+            "description": "가릴 후보 값의 원문 표기. 공백·구분자·대소문자를 그대로 유지."
+          },
+          "role_raw": {
+            "type": "string",
+            "description": "원문에 명시된 항목명·역할. 원문에 없으면 추정하지 않는다."
+          },
+          "context_raw": {
+            "type": "string",
+            "description": "이 출현 위치를 구별할 짧은 주변 원문 또는 표 머리글."
+          }
+        }
+      }
+    },
+    "management_id": {
+      "type": "array",
+      "description": "사번·학번·고객·환자·접수·참여자 코드. 단순 표 행 순번과 구분한다. 중점 위치·역할: 전체 본문·표·부록·기타 지원 구조. 문서 전체의 모든 출현을 원문 표기대로 추출한다. 값 생성·계산·정규화 금지. 다른 종류도 제외하지 않는다.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "raw_value": {
+            "type": "string",
+            "description": "가릴 후보 값의 원문 표기. 공백·구분자·대소문자를 그대로 유지."
+          },
+          "role_raw": {
+            "type": "string",
+            "description": "원문에 명시된 항목명·역할. 원문에 없으면 추정하지 않는다."
+          },
+          "context_raw": {
+            "type": "string",
+            "description": "이 출현 위치를 구별할 짧은 주변 원문 또는 표 머리글."
+          }
+        }
+      }
+    }
+  }
+}

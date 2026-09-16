@@ -1,0 +1,34 @@
+# 빌드·의존성
+.next/
+node_modules/
+
+# 로컬 작업 공간·세션storage 관련 임시 데이터
+var/
+*.job.json
+
+# Python 캐시·컴파일
+__pycache__/
+*.pyc
+*.pyo
+
+# OS/편집기
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# 로컬 환경·비밀
+.env
+.env.*
+!.env.example
+.netrc
+*.key
+*.pem
+*.p12
+*.pfx
+credential*
+_secrets*
+
+# 도커·로컬 실행 부산물(필요 시)
+docker-compose.yml
+*.pid

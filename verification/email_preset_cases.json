@@ -1,0 +1,152 @@
+[
+  {
+    "value": "hong@example.com",
+    "firstMask": [
+      [
+        1,
+        4
+      ]
+    ],
+    "firstResult": "h\u2588\u2588\u2588@example.com",
+    "localMask": [
+      [
+        0,
+        4
+      ]
+    ]
+  },
+  {
+    "value": "a@example.com",
+    "firstMask": null,
+    "localMask": [
+      [
+        0,
+        1
+      ]
+    ]
+  },
+  {
+    "value": "\uae40\uac00\ub9bc@example.kr",
+    "firstMask": [
+      [
+        1,
+        3
+      ]
+    ],
+    "firstResult": "\uae40\u2588\u2588@example.kr",
+    "localMask": [
+      [
+        0,
+        3
+      ]
+    ]
+  },
+  {
+    "value": "\ud83d\ude00ab@example.com",
+    "firstMask": [
+      [
+        1,
+        3
+      ]
+    ],
+    "firstResult": "\ud83d\ude00\u2588\u2588@example.com",
+    "localMask": [
+      [
+        0,
+        3
+      ]
+    ]
+  },
+  {
+    "value": "\u00e9cho@example.com",
+    "firstMask": [
+      [
+        1,
+        4
+      ]
+    ],
+    "firstResult": "\u00e9\u2588\u2588\u2588@example.com",
+    "localMask": [
+      [
+        0,
+        4
+      ]
+    ]
+  },
+  {
+    "value": "a+b@example.com",
+    "firstMask": [
+      [
+        1,
+        3
+      ]
+    ],
+    "firstResult": "a\u2588\u2588@example.com",
+    "localMask": [
+      [
+        0,
+        3
+      ]
+    ]
+  },
+  {
+    "value": "e\u0301cho@example.com",
+    "firstMask": null,
+    "localMask": null
+  },
+  {
+    "value": "\u1100\u1161\ub098@example.com",
+    "firstMask": null,
+    "localMask": null
+  },
+  {
+    "value": "\ud83d\udc4d\ud83c\udffdab@example.com",
+    "firstMask": null,
+    "localMask": null
+  },
+  {
+    "value": "\ud83d\udc68\u200d\ud83d\udc69\u200d\ud83d\udc67\u200d\ud83d\udc66ab@example.com",
+    "firstMask": null,
+    "localMask": null
+  },
+  {
+    "value": "\ud83c\uddf0\ud83c\uddf7ab@example.com",
+    "firstMask": null,
+    "localMask": null
+  },
+  {
+    "value": "a\ud800b@example.com",
+    "firstMask": null,
+    "localMask": null
+  },
+  {
+    "value": "a\u0000b@example.com",
+    "firstMask": null,
+    "localMask": null
+  },
+  {
+    "value": "a b@example.com",
+    "firstMask": null,
+    "localMask": null
+  },
+  {
+    "value": "@example.com",
+    "firstMask": null,
+    "localMask": null
+  },
+  {
+    "value": "hong@",
+    "firstMask": null,
+    "localMask": null
+  },
+  {
+    "value": "hong@@example.com",
+    "firstMask": null,
+    "localMask": null
+  },
+  {
+    "value": "hong.example.com",
+    "firstMask": null,
+    "localMask": null
+  }
+]

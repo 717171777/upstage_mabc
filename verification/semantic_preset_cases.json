@@ -1,0 +1,258 @@
+[
+  {
+    "type": "dob",
+    "value": "1995-08-17",
+    "results": {
+      "dob_year_only": "1995\u2588\u2588\u2588\u2588\u2588\u2588"
+    }
+  },
+  {
+    "type": "dob",
+    "value": "2000.2.29",
+    "results": {
+      "dob_year_only": "2000\u2588\u2588\u2588\u2588\u2588"
+    }
+  },
+  {
+    "type": "dob",
+    "value": "1995\ub144 8\uc6d4 17\uc77c",
+    "results": {
+      "dob_year_only": "1995\ub144\u2588\u2588\u2588\u2588\u2588\u2588\u2588"
+    }
+  },
+  {
+    "type": "dob",
+    "value": "19950817",
+    "results": {
+      "dob_year_only": "1995\u2588\u2588\u2588\u2588"
+    }
+  },
+  {
+    "type": "dob",
+    "value": "1995/08/17",
+    "results": {
+      "dob_year_only": "1995\u2588\u2588\u2588\u2588\u2588\u2588"
+    }
+  },
+  {
+    "type": "dob",
+    "value": "1900-02-29",
+    "results": {}
+  },
+  {
+    "type": "dob",
+    "value": "95-08-17",
+    "results": {}
+  },
+  {
+    "type": "dob",
+    "value": "1995-13-17",
+    "results": {}
+  },
+  {
+    "type": "dob",
+    "value": "1995-08/17",
+    "results": {}
+  },
+  {
+    "type": "phone",
+    "value": "010-1234-5678",
+    "results": {
+      "phone_suffix2": "\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258878",
+      "phone_suffix4": "\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u25885678"
+    }
+  },
+  {
+    "type": "phone",
+    "value": "021234567",
+    "results": {
+      "phone_suffix2": "\u2588\u2588\u2588\u2588\u2588\u2588\u258867",
+      "phone_suffix4": "\u2588\u2588\u2588\u2588\u25884567"
+    }
+  },
+  {
+    "type": "phone",
+    "value": "+82 10 1234 5678",
+    "results": {
+      "phone_suffix2": "\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258878",
+      "phone_suffix4": "\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u25885678"
+    }
+  },
+  {
+    "type": "phone",
+    "value": "010",
+    "results": {}
+  },
+  {
+    "type": "phone",
+    "value": "\uae34\uae09 119",
+    "results": {}
+  },
+  {
+    "type": "phone",
+    "value": "010-1234-5678 \ub0b4\uc120 45",
+    "results": {}
+  },
+  {
+    "type": "address",
+    "value": "\uc11c\uc6b8\ud2b9\ubcc4\uc2dc \uac15\ub0a8\uad6c \uc5ed\uc0bc\ub3d9 123-4",
+    "results": {
+      "address_region": "\uc11c\uc6b8\ud2b9\ubcc4\uc2dc\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588",
+      "address_city": "\uc11c\uc6b8\ud2b9\ubcc4\uc2dc \uac15\ub0a8\uad6c\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588",
+      "address_locality": "\uc11c\uc6b8\ud2b9\ubcc4\uc2dc \uac15\ub0a8\uad6c \uc5ed\uc0bc\ub3d9\u2588\u2588\u2588\u2588\u2588\u2588"
+    }
+  },
+  {
+    "type": "address",
+    "value": "\uacbd\uae30\ub3c4 \uc218\uc6d0\uc2dc \uc601\ud1b5\uad6c \uc601\ud1b5\ub3d9 123 101\ub3d9 202\ud638",
+    "results": {
+      "address_region": "\uacbd\uae30\ub3c4\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588",
+      "address_city": "\uacbd\uae30\ub3c4 \uc218\uc6d0\uc2dc\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588",
+      "address_district": "\uacbd\uae30\ub3c4 \uc218\uc6d0\uc2dc \uc601\ud1b5\uad6c\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588",
+      "address_locality": "\uacbd\uae30\ub3c4 \uc218\uc6d0\uc2dc \uc601\ud1b5\uad6c \uc601\ud1b5\ub3d9\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588"
+    }
+  },
+  {
+    "type": "address",
+    "value": "\uc11c\uc6b8\uc2dc  \uac15\ub0a8\uad6c\t\ud14c\uc2a4\ud2b8\ub85c  12",
+    "results": {
+      "address_region": "\uc11c\uc6b8\uc2dc\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588",
+      "address_city": "\uc11c\uc6b8\uc2dc  \uac15\ub0a8\uad6c\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588"
+    }
+  },
+  {
+    "type": "address",
+    "value": "\uc138\uc885\ud2b9\ubcc4\uc790\uce58\uc2dc \uc870\uce58\uc6d0\uc74d \uc0c8\ub0b4\ub85c 12",
+    "results": {
+      "address_region": "\uc138\uc885\ud2b9\ubcc4\uc790\uce58\uc2dc\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588",
+      "address_locality": "\uc138\uc885\ud2b9\ubcc4\uc790\uce58\uc2dc \uc870\uce58\uc6d0\uc74d\u2588\u2588\u2588\u2588\u2588\u2588\u2588"
+    }
+  },
+  {
+    "type": "address",
+    "value": "\uc81c\uc8fc\ud2b9\ubcc4\uc790\uce58\ub3c4 \uc81c\uc8fc\uc2dc \uc560\uc6d4\uc74d \ud14c\uc2a4\ud2b8\ub9ac 12",
+    "results": {
+      "address_region": "\uc81c\uc8fc\ud2b9\ubcc4\uc790\uce58\ub3c4\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588",
+      "address_city": "\uc81c\uc8fc\ud2b9\ubcc4\uc790\uce58\ub3c4 \uc81c\uc8fc\uc2dc\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588",
+      "address_locality": "\uc81c\uc8fc\ud2b9\ubcc4\uc790\uce58\ub3c4 \uc81c\uc8fc\uc2dc \uc560\uc6d4\uc74d\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588"
+    }
+  },
+  {
+    "type": "address",
+    "value": "\uc11c\uc6b8\uc2dc \uac15\ub0a8\uad6c 101\ub3d9 202\ud638",
+    "results": {
+      "address_region": "\uc11c\uc6b8\uc2dc\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588",
+      "address_city": "\uc11c\uc6b8\uc2dc \uac15\ub0a8\uad6c\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588"
+    }
+  },
+  {
+    "type": "address",
+    "value": "\uc11c\uc6b8\uc2dc \uac15\ub0a8\uad6c",
+    "results": {
+      "address_region": "\uc11c\uc6b8\uc2dc\u2588\u2588\u2588\u2588"
+    }
+  },
+  {
+    "type": "address",
+    "value": "\uc11c\uc6b8\ud2b9\ubcc4\uc2dc",
+    "results": {}
+  },
+  {
+    "type": "address",
+    "value": "\uac15\ub0a8\uad6c \uc5ed\uc0bc\ub3d9 123",
+    "results": {}
+  },
+  {
+    "type": "address",
+    "value": "\uc11c\uc6b8\uac15\ub0a8\uad6c\uc5ed\uc0bc\ub3d9123",
+    "results": {}
+  },
+  {
+    "type": "address",
+    "value": "123 Main Street New York",
+    "results": {}
+  },
+  {
+    "type": "account",
+    "value": "123-456-7890",
+    "results": {
+      "id_suffix2": "\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258890",
+      "id_suffix4": "\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u25887890"
+    }
+  },
+  {
+    "type": "card",
+    "value": "1234 5678 9012 3456",
+    "results": {
+      "id_suffix2": "\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258856",
+      "id_suffix4": "\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u25883456"
+    }
+  },
+  {
+    "type": "management_id",
+    "value": "EMP-2026-0012",
+    "results": {
+      "id_suffix2": "\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258812",
+      "id_suffix4": "\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u25880012"
+    }
+  },
+  {
+    "type": "resident_id",
+    "value": "950817-1234567",
+    "results": {}
+  },
+  {
+    "type": "foreign_id",
+    "value": "950817-5234567",
+    "results": {}
+  },
+  {
+    "type": "passport",
+    "value": "M12345678",
+    "results": {}
+  },
+  {
+    "type": "driver_license",
+    "value": "11-12-123456-78",
+    "results": {}
+  },
+  {
+    "type": "name",
+    "value": "\uae40\uac00\ub78c",
+    "results": {
+      "name_initial": "\uae40\u2588\u2588"
+    }
+  },
+  {
+    "type": "name",
+    "value": "\ub0a8\uad81\uac00\ub78c",
+    "results": {
+      "name_initial": "\ub0a8\u2588\u2588\u2588"
+    }
+  },
+  {
+    "type": "name",
+    "value": "Alex Lee",
+    "results": {}
+  },
+  {
+    "type": "name",
+    "value": "\u1100\u1161\ub098\ub2e4",
+    "results": {}
+  },
+  {
+    "type": "account",
+    "value": "\ud83d\ude00123456",
+    "results": {}
+  },
+  {
+    "type": "address",
+    "value": "\uad11\uc8fc\uc2dc \ud14c\uc2a4\ud2b8\ub3d9 123",
+    "results": {}
+  },
+  {
+    "type": "address",
+    "value": "\uc11c\uc6b8\uc2dc \uac15\ub0a8\uad6c e\u0301\uae38 123",
+    "results": {}
+  }
+]

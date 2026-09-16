@@ -1,0 +1,32 @@
+# allowlist
+*
+!package*.json
+!next.config.ts
+!tsconfig.json
+!next-env.d.ts
+!postcss.config.mjs
+!src/
+!src/**
+!public/
+!public/**
+!backend/
+!backend/**
+!fixtures/eval_v0/
+!fixtures/eval_v0/**
+!deploy/
+!deploy/**
+!reference/
+!reference/schemas/
+!reference/schemas/**
+!Dockerfile
+
+# exclude
+**/__pycache__/**
+**/*.pyc
+**/.env*
+**/.DS_Store
+var/**
+verification/**
+.hermes-runtime/**
+node_modules/**
+.next/**
