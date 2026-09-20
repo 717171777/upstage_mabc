@@ -2,6 +2,7 @@
 import copy
 from . import store, plans, workflow_files
 from .judge import _validate_suggestion
+from .masking_policy import model_selectable_presets
 
 
 def run(job, payload):
@@ -83,7 +84,19 @@ def run(job, payload):
             continue
 
         methods = {r['recommendation'] for r in recs_for_c}
-        decisions[cid] = {'method': 'keep' if methods == {'keep'} else 'full', 'mask': []}
+        if methods == {'keep'}:
+            decisions[cid] = {'method': 'keep', 'mask': []}
+            continue
+        # 전체 가림으로 모인 항목에 한해, 제안이 하나의 프리셋으로 일치할 때만
+        # 완화한다. 프리셋이 갈리거나 없으면 전체 가림을 유지한다.
+        preset_ids = {r.get('presetId') for r in recs_for_c}
+        if methods == {'full'} and len(preset_ids) == 1:
+            preset_id = next(iter(preset_ids))
+            mask = model_selectable_presets(c).get(preset_id) if preset_id else None
+            if mask:
+                decisions[cid] = {'method': 'partial', 'mask': copy.deepcopy(mask)}
+                continue
+        decisions[cid] = {'method': 'full', 'mask': []}
 
     candidate_items = []
     for c in manual_confirmed:

@@ -227,7 +227,7 @@ function syntheticJob() {
     await page.keyboard.press('3');
     await page.keyboard.press('ArrowLeft');
     assert.equal(await editor().getByRole('button',{name:/시·도까지만 공개/}).getAttribute('aria-pressed'),'true');
-    await editor().getByText('경기도'+'█'.repeat(26),{exact:true}).waitFor();
+    await editor().getByText('경기도'+'*'.repeat(26),{exact:true}).waitFor();
     await page.screenshot({path:'verification/semantic-presets/address-editor.png',fullPage:true});
     await confirm();
     await page.reload({waitUntil:'networkidle'});
@@ -236,7 +236,7 @@ function syntheticJob() {
     assert.equal(await editor().getByRole('button',{name:/시·도 \+ 시·군까지 공개/}).getAttribute('aria-pressed'),'true');
     await showType('dob','1995년 8월 17일');
     await page.keyboard.press('2');
-    await editor().getByText('1995년'+'█'.repeat(7),{exact:true}).waitFor();
+    await editor().getByText('1995년'+'*'.repeat(7),{exact:true}).waitFor();
     await page.screenshot({path:'verification/semantic-presets/dob-editor.png',fullPage:true});
     await confirm();
     assert.deepEqual(job.candidates[0].mask,[[5,12]]);

@@ -142,7 +142,7 @@ def test_local_automatic_uses_actual_saved_file_and_preserves_manual_choice(fmt)
     assert manual['value'] in text
     assert email['value'] not in text
     if fmt == 'docx':
-        assert email['value'][0] + '██' + email['value'][email['value'].index('@'):] not in text
+        assert email['value'][0] + '**' + email['value'][email['value'].index('@'):] not in text
     fresh = store.load_job(job['id'], token)
     assert fresh['artifact'] == job['artifact'] and fresh['acknowledged'] is True
 
@@ -240,5 +240,5 @@ def test_repeat_auto_export_reconsiders_automatic_email_and_preserves_manual_par
     saved = workflow_files.artifact_path(fresh, ack_required=True)
     actual_text = '\n'.join(u['text'] for u in engine.inspect_document(saved)['units'])
     assert automatic['value'] not in actual_text
-    assert '██' + manual['value'][manual_mask[0][1]:] in actual_text
+    assert '**' + manual['value'][manual_mask[0][1]:] in actual_text
     assert store.source_path(fresh).read_bytes() == source.read_bytes()

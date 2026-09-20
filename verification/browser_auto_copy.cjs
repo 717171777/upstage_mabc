@@ -35,7 +35,7 @@ const synthetic=()=>({
    job={...job,status:'validated',artifact:{sha256:'hash-'+job.version,version:job.version,validationVersion:job.version,checks:[{name:'저장 파일 검사',passed:true}]}};body=job;
   }else if(path.endsWith('/preview')){
    const copy=url.searchParams.get('variant')==='copy';if(copy){assert.equal(job.status,'validated');calls.push('copy-preview');}
-   const units=copy?[{id:'u1',text:'███ 문의'}]:job.units;
+   const units=copy?[{id:'u1',text:'*** 문의'}]:job.units;
    body={format:'docx',units,blocks:[{kind:'paragraph',unitId:'u1'}],metadata:[],uninspected:[]};
   }else if(!path.endsWith('/jobs/auto-copy-synthetic'))throw Error('Unexpected service call '+path);
   return r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(body)});

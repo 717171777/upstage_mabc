@@ -26,7 +26,7 @@ REL_NS = 'http://schemas.openxmlformats.org/package/2006/relationships'
 CUSTOM_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/custom-properties'
 APP_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/extended-properties'
 
-_MASK_CHAR = '\u2588'  # █
+_MASK_CHAR = '*'  # 국내 마스킹 관행 표기
 
 
 # ---------------------------------------------------------------------------

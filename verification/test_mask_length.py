@@ -10,8 +10,8 @@ W='http://schemas.openxmlformats.org/wordprocessingml/2006/main'
 FIXTURE=Path(__file__).parents[1]/'fixtures/eval_v0/docs/docx-report_minutes-01.docx'
 
 @pytest.mark.parametrize('method,mask,expected',[
- ('full',[], '████████'),
- ('partial',[[1,4],[6,8]],'김███ab██'),
+ ('full',[], '********'),
+ ('partial',[[1,4],[6,8]],'김***ab**'),
  ('delete',[],''),
  ('keep',[],'김가람😀ab12'),
 ])

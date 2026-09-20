@@ -51,7 +51,7 @@ def run_review(jid, token, snapshot, temp, capacity):
 
         # Fully opaque mask glyphs contain no identity; do not report them as a person.
         tempjob['candidates'] = [c for c in tempjob['candidates'] if not (
-            c.get('value', '').strip() and set(c['value'].strip()) <= {'█', '■', ' ', '\t', '\n'})]
+            c.get('value', '').strip() and set(c['value'].strip()) <= {'*', '█', '■', ' ', '\t', '\n'})]
         attach_location_context(path, info, tempjob['candidates'])
         candidates = tempjob['candidates'][:1000]
         incomplete = bool(tempjob.get('analysis', {}).get('incomplete'))

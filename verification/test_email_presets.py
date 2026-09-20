@@ -18,6 +18,6 @@ def test_email_preset_ranges_match_ui_contract(case):
         assert next(iter(result)) == 'email_first_and_domain'
         start, end = case['firstMask'][0]
         value = case['value']
-        assert value[:start] + '█' * (end - start) + value[end:] == case['firstResult']
+        assert value[:start] + '*' * (end - start) + value[end:] == case['firstResult']
     else:
         assert 'email_first_and_domain' not in result

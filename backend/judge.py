@@ -9,6 +9,7 @@ import time
 from pathlib import Path
 
 from .llm_config import MODEL, configured
+from .masking_policy import model_selectable_presets
 BATCH_SIZE = 20
 
 ALLOWED_TYPES = frozenset([
@@ -97,6 +98,13 @@ def _validate_payload(payload):
         keep_evidence = _allowed_keep_evidence(c, context.get('keepInfo', ''))
         c['allowedKeepEvidence'] = keep_evidence
         c['allowedRecommendations'] = ['full'] + (['keep'] if keep_evidence else [])
+        # 가림 여부는 위 이진 판단으로 정한다. 전체 가림으로 정해진 항목에
+        # 한해, 제출 상황이 주어졌을 때만 완화 프리셋을 고를 수 있다.
+        # 구간은 서버가 계산하며 모델은 id만 고른다. 고르지 않으면 전체 가림.
+        if context.get('recipient') or context.get('purpose'):
+            c['selectablePresets'] = sorted(model_selectable_presets(c))
+        else:
+            c['selectablePresets'] = []
 
     return {
         'jobWorkspace': jobWorkspace,
@@ -230,12 +238,17 @@ def _validate_suggestion(s, batch_ids, batch_candidates, keepInfo):
         if not (has_public or named):
             return None, ['keep는 공개 역할 또는 keepInfo에 명시적 명시가 필요합니다']
 
+    # presetId는 전체 가림으로 정해진 항목에서만, 서버가 계산한 목록에서만 받는다.
+    preset_id = s.get('presetId')
+    if preset_id is not None:
+        allowed = model_selectable_presets(cand or {})
+        if rec != 'full' or not isinstance(preset_id, str) or preset_id not in allowed:
+            s = {k: v for k, v in s.items() if k != 'presetId'}
+
     stable = hashlib.sha256(f"{cid}{stype}{content}".encode()).hexdigest()[:16]
     out = {k: s[k] for k in (*required, 'presetId', 'question') if k in s}
     out['id'] = stable
     out.pop('mask', None)
-    if rec != 'partial':
-        out.pop('presetId', None)
     return out, []
 
 

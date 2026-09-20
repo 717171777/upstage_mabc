@@ -267,8 +267,8 @@ def _validate_suggestions(suggs):
         raise ValueError('suggestions는 리스트여야 합니다')
     out = []
     for s in suggs:
-        if not isinstance(s, dict) or not {'candidateId', 'recommendation', 'evidence'} <= set(s) or set(s) - {'candidateId', 'recommendation', 'evidence', 'question'}:
-            raise ValueError('가림 여부 응답에는 ID, full/keep, 원문 근거만 필요합니다')
+        if not isinstance(s, dict) or not {'candidateId', 'recommendation', 'evidence'} <= set(s) or set(s) - {'candidateId', 'recommendation', 'evidence', 'question', 'presetId'}:
+            raise ValueError('가림 여부 응답에는 ID, full/keep, 원문 근거, 선택적 presetId만 필요합니다')
         if any(not isinstance(s[k], str) for k in s):
             raise ValueError('가림 여부 응답의 값은 문자열이어야 합니다')
         rec, evidence = s['recommendation'], s['evidence']
@@ -277,6 +277,9 @@ def _validate_suggestions(suggs):
         question = s.get('question')
         if question is not None and (not question.strip() or len(question) > 120 or rec != 'full' or not evidence):
             raise ValueError('확인 질문은 원문 근거와 기본 전체 가림이 필요합니다')
+        preset_id = s.get('presetId')
+        if preset_id is not None and (not preset_id.strip() or len(preset_id) > 60 or rec != 'full'):
+            raise ValueError('프리셋은 전체 가림으로 정한 항목에만 붙일 수 있습니다')
         out.append({**s,
             'type': 'question' if question or not evidence else 'recommendation',
             'content': question or ( '공유본에서 유지합니다.' if rec == 'keep' else '공유본에서 전체 가림합니다.'),

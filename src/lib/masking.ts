@@ -102,7 +102,7 @@ export function validPartial(value: string, mask: Mask): boolean {
 export function maskedText(value: string, method: Method, mask: Mask = []): string {
   if (method === 'keep') return value;
   if (method === 'delete') return '';
-  if (method === 'full') return '█'.repeat(Array.from(value).length);
+  if (method === 'full') return '*'.repeat(Array.from(value).length);
 
   const codepoints = Array.from(value);
   let normalized: Mask;
@@ -120,7 +120,7 @@ export function maskedText(value: string, method: Method, mask: Mask = []): stri
       parts.push(codepoints[ci]);
       ci++;
     }
-    parts.push('█'.repeat(end - start));
+    parts.push('*'.repeat(end - start));
     ci = end;
   }
   while (ci < codepoints.length) {
@@ -208,6 +208,60 @@ function dobYearMask(value: string): Mask {
   return [[value[4] === '년' ? 5 : 4, Array.from(value).length]];
 }
 
+
+function digitPositions(value: string): number[] {
+  const cps = Array.from(value);
+  const out: number[] = [];
+  cps.forEach((c, i) => { if (c >= '0' && c <= '9') out.push(i); });
+  return out;
+}
+
+// 숫자 위치를 연속 구간으로 합친다. 구분자는 가리지 않는다.
+function mergePositions(positions: number[]): Mask {
+  const ranges: [number, number][] = [];
+  for (const p of positions) {
+    const last = ranges[ranges.length - 1];
+    if (last && last[1] === p) last[1] = p + 1;
+    else ranges.push([p, p + 1]);
+  }
+  return ranges;
+}
+
+function digitGroups(value: string): [number, number][] {
+  const cps = Array.from(value);
+  const groups: [number, number][] = [];
+  let start = -1;
+  cps.forEach((c, i) => {
+    const digit = c >= '0' && c <= '9';
+    if (digit && start < 0) start = i;
+    if (!digit && start >= 0) { groups.push([start, i]); start = -1; }
+  });
+  if (start >= 0) groups.push([start, cps.length]);
+  return groups;
+}
+
+function cardIsmsMask(value: string): Mask {
+  if (!/^[0-9]{4}[- ]?[0-9]{4}[- ]?[0-9]{4}[- ]?[0-9]{4}$/.test(value)) return [];
+  return mergePositions(digitPositions(value).slice(6, 12));
+}
+
+interface ResidentMasks { birthGender: Mask; birthOnly: Mask; genderOnly: Mask; yearOnly: Mask }
+
+// 뒷 7자리는 그 자체로 개인을 특정하므로 노출하는 프리셋을 두지 않는다.
+function residentMasks(value: string): ResidentMasks | null {
+  const m = value.match(/^([0-9]{6})([- ]?)([0-9])([0-9]{6})$/);
+  if (!m) return null;
+  const cpCount = Array.from(value).length;
+  const positions = digitPositions(value);
+  const gender = positions[6];
+  return {
+    birthGender: [[gender + 1, cpCount]],
+    birthOnly: [[gender, cpCount]],
+    genderOnly: [...mergePositions(positions.slice(0, 6)), [gender + 1, cpCount]],
+    yearOnly: [...mergePositions(positions.slice(2, 6)), [gender, cpCount]],
+  };
+}
+
 export function partialDisclosureHint(type: PiiType): string {
   switch (type) {
     case 'dob': return '연도만 남기면 출생 연도를 알 수 있고, 월·일은 보이지 않습니다.';
@@ -245,14 +299,20 @@ export function presetsFor(type: PiiType, value: string): Preset[] {
     case 'phone': {
       const digits = value.replace(/[^0-9]/g, '');
       if (/^\+?[0-9 ()-]+$/.test(value) && digits.length >= 9 && digits.length <= 15) {
-        addPreset('phone_suffix2', '끝 2자리만 남김 · 번호 대조', suffixMask(value, 2));
+        const groups = digitGroups(value);
+        if (groups.length === 3) {
+          addPreset('phone_middle', '국번만 가림 · 010-****-5678', [[groups[1][0], groups[1][1]]]);
+          addPreset('phone_tail', '끝자리만 가림 · 010-1234-****', [[groups[2][0], groups[2][1]]]);
+        }
         addPreset('phone_suffix4', '끝 4자리만 남김 · 번호 대조', suffixMask(value, 4));
+        addPreset('phone_suffix2', '끝 2자리만 남김 · 번호 대조', suffixMask(value, 2));
       }
       break;
     }
     case 'email': {
       const localEnd = emailLocalPartEnd(value);
       if (localEnd !== null) {
+        if (localEnd > 2) addPreset('email_keep2', '앞 2글자와 도메인 남김', [[2, localEnd]]);
         if (localEnd > 1) addPreset('email_first_and_domain', '첫 글자와 도메인 남김', [[1, localEnd]]);
         addPreset('email_local_part', '도메인만 남김', [[0, localEnd]]);
       }
@@ -263,8 +323,9 @@ export function presetsFor(type: PiiType, value: string): Preset[] {
       break;
     case 'account': case 'card': case 'management_id':
       if (/^[A-Za-z0-9 ._/-]+$/.test(value)) {
-        addPreset('id_suffix2', '끝 2자리만 남김 · 번호 대조', suffixMask(value, 2));
+        if (type === 'card') addPreset('card_isms', '가운데만 가림 · 1234-56**-****-3456', cardIsmsMask(value));
         addPreset('id_suffix4', '끝 4자리만 남김 · 번호 대조', suffixMask(value, 4));
+        addPreset('id_suffix2', '끝 2자리만 남김 · 번호 대조', suffixMask(value, 2));
       }
       break;
     case 'dob':
@@ -272,13 +333,26 @@ export function presetsFor(type: PiiType, value: string): Preset[] {
       break;
     case 'name':
       // Do not guess surnames, compound surnames, or foreign name structure.
-      if (/^[가-힣]{2,4}$/.test(value)) addPreset('name_initial', '이름 첫 글자만 남김', [[1, cpCount]]);
+      if (/^[가-힣]{2,4}$/.test(value)) {
+        if (cpCount > 2) addPreset('name_middle', '가운데만 가림 · 홍*동', [[1, cpCount - 1]]);
+        addPreset('name_initial', '이름 첫 글자만 남김', [[1, cpCount]]);
+      }
       break;
+    case 'resident_id': case 'foreign_id': {
+      const r = residentMasks(value);
+      if (r) {
+        addPreset('rrn_year_only', '출생 연도만 남김 · 90****-*******', r.yearOnly);
+        addPreset('rrn_gender_only', '성별 한 자리만 남김 · ******-1******', r.genderOnly);
+        addPreset('rrn_birth_only', '생년월일만 남김 · 900101-*******', r.birthOnly);
+        addPreset('rrn_birth_gender', '생년월일·성별 남김 · 900101-1****** (재식별 주의)', r.birthGender);
+      }
+      break;
+    }
     // Identity documents and unknown formats have full masking + direct selection.
     default: break;
   }
 
-  return presets.slice(0, 4);
+  return presets.slice(0, 5);
 }
 
 export function selectedTextRange(
