@@ -1,4 +1,4 @@
-"""Document purpose hints for document APIs and the sole runtime SP4 judge.
+"""Document purpose hints for document APIs and the sole runtime Claude judge.
 
 These are service rules, never instructions obtained from an uploaded document.
 No automatic keep decision is made by this module.

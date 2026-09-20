@@ -137,7 +137,7 @@ export function UploadContextQuestions({ value, onChange, onStart, disabled = fa
     </div>
 
     <div className="mt-7 border-t border-slate-200 pt-5">
-      <p className="mb-4 text-xs leading-relaxed text-slate-500">분석 시작 시 문서·공유 상황은 Upstage로, 필요한 원문 근거·상황은 Hermes·SP4로 전송됩니다.</p>
+      <p className="mb-4 text-xs leading-relaxed text-slate-500">분석 시작 시 문서·공유 상황은 Upstage로, 필요한 원문 근거·상황은 Hermes·Claude(Anthropic)로 전송됩니다.</p>
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" disabled={unavailable || step === 0} onClick={() => move(step - 1)} className={`min-h-11 border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 ${control}`}>이전</button>
         <button type="button" disabled={unavailable} onClick={() => step < 2 ? move(step + 1) : void start(latest.current)}

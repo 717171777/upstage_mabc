@@ -58,19 +58,26 @@ def set_drain(container, enabled):
 
 def start_backend():
     from dotenv import dotenv_values
-    key = dotenv_values(Path.home()/'.hermes/.env').get('UPSTAGE_API_KEY')
+    values = dotenv_values(Path.home()/'.hermes/.env')
+    key = os.environ.get('UPSTAGE_API_KEY') or values.get('UPSTAGE_API_KEY')
+    claude_key = os.environ.get('ANTHROPIC_API_KEY') or values.get('ANTHROPIC_API_KEY')
+    if not claude_key:
+        raise RuntimeError('Claude 연결 키가 없습니다')
     if not key:
         raise RuntimeError('Upstage 연결 키가 없습니다')
     os.environ['UPSTAGE_API_KEY'] = key
+    os.environ['ANTHROPIC_API_KEY'] = claude_key
     run('run', '-d', '--name', BACK, '--restart', 'unless-stopped', '--network', NETWORK,
         '--mount', f'type=volume,source={VOLUME},target=/data',
-        '--env', 'UPSTAGE_API_KEY', '--env', 'GARIMI_PUBLIC_ORIGIN=http://localhost:3002',
+        '--env', 'UPSTAGE_API_KEY', '--env', 'ANTHROPIC_API_KEY',
+        '--env', 'GARIMI_CLAUDE_MODEL=claude-sonnet-5', '--env', 'GARIMI_PUBLIC_ORIGIN=http://localhost:3002',
         '--env', 'GARIMI_REQUIRE_UPSTAGE=1', '--env', 'GARIMI_ALLOW_USER_DOCUMENTS=1',
         '--security-opt', 'no-new-privileges:true', '--stop-timeout', '60',
         '--health-cmd', "python3 -c \"import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/health',timeout=3)\"",
         IMAGE, 'python3', '-m', 'uvicorn', 'backend.http_policy:app', '--host', '0.0.0.0', '--port', '8000',
         '--workers', '1', '--no-access-log')
     os.environ.pop('UPSTAGE_API_KEY', None)
+    os.environ.pop('ANTHROPIC_API_KEY', None)
 
 
 def start_frontend():

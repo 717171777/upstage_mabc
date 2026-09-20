@@ -7,7 +7,7 @@ from backend import judge
 @pytest.fixture
 def payload(tmp_path,monkeypatch):
  data=tmp_path/'jobs';data.mkdir();ws=data/('a'*32);ws.mkdir()
- monkeypatch.setenv('GARIMI_DATA_DIR',str(data));monkeypatch.setenv('UPSTAGE_API_KEY','synthetic-test-key')
+ monkeypatch.setenv('GARIMI_DATA_DIR',str(data));monkeypatch.setenv('ANTHROPIC_API_KEY','synthetic-test-key')
  return {'jobWorkspace':str(ws),'context':{'recipient':None,'purpose':'','keepInfo':None},'documentType':'other','candidates':[{'id':'c_'+'a'*24,'type':'phone','value':'010-0000-0000','role_raw':'','context_raw':''}]}
 def response(suggestions,**kwargs):
  return SimpleNamespace(returncode=0,stdout=json.dumps({'status':'completed','model':judge.MODEL,'suggestions':suggestions,**kwargs}))
@@ -42,7 +42,7 @@ def test_explicit_user_keep_evidence(payload,monkeypatch):
  monkeypatch.setattr(judge.subprocess,'run',lambda *a,**kw:response([suggestion(c['id'],recommendation='keep',evidence=payload['context']['keepInfo'])]))
  assert judge.judge_exceptions(payload)['status']=='completed'
 def test_empty_does_not_start_process(monkeypatch):
- monkeypatch.delenv('UPSTAGE_API_KEY',raising=False)
+ monkeypatch.delenv('ANTHROPIC_API_KEY',raising=False)
  monkeypatch.setattr(judge.subprocess,'run',lambda *a,**kw:pytest.fail('must not call'))
  assert judge.judge_exceptions({'candidates':[]})['status']=='not_needed'
 

@@ -215,7 +215,7 @@ export function AnalysisStatus({ job }: { job: Job }) {
 
       <div className="mt-3 pt-3 border-t border-slate-100">
         <p className="text-xs text-slate-500">
-          Upstage에 문서 파일과 공유 상황을, Hermes·SP4에 필요한 원문 근거와 공유 상황을 보냅니다.
+          Upstage에 문서 파일과 공유 상황을, Hermes·Claude(Anthropic)에 필요한 원문 근거와 공유 상황을 보냅니다.
         </p>
       </div>
     </div>

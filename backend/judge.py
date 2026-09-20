@@ -8,7 +8,7 @@ import re
 import time
 from pathlib import Path
 
-MODEL = 'solar-pro4-260806'
+from .llm_config import MODEL, configured
 BATCH_SIZE = 20
 
 ALLOWED_TYPES = frozenset([
@@ -300,7 +300,7 @@ def _request_batch(batch_payload, workspace, keep_info):
     with tempfile.TemporaryDirectory(prefix='hermes-', dir=workspace) as tmp:
         os.chmod(tmp, 0o700)
         env = os.environ.copy()
-        for key in ('OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'GOOGLE_API_KEY', 'OPENROUTER_API_KEY'):
+        for key in ('OPENAI_API_KEY', 'UPSTAGE_API_KEY', 'GOOGLE_API_KEY', 'OPENROUTER_API_KEY'):
             env.pop(key, None)
         env['HERMES_HOME'] = tmp
         env['HERMES_SOURCE'] = os.environ.get('HERMES_SOURCE', '/opt/hermes-agent')
@@ -340,8 +340,8 @@ def judge_exceptions(payload):
     if not validated['candidates']:
         return {'suggestions': [], 'model': None, 'status': 'not_needed', 'warnings': []}
     ok, errors = _validate_job_workspace(validated['jobWorkspace'])
-    if not ok or not os.environ.get('UPSTAGE_API_KEY', ''):
-        return {'suggestions': [], 'model': MODEL, 'status': 'failed', 'warnings': errors or ['UPSTAGE_API_KEY가 설정되지 않았습니다']}
+    if not ok or not configured():
+        return {'suggestions': [], 'model': MODEL, 'status': 'failed', 'warnings': errors or ['Claude API 키 또는 GARIMI_CLAUDE_MODEL이 설정되지 않았습니다']}
 
     # Internal callbacks/cache are never placed in the worker request.
     progress = payload.get('_progress')
@@ -357,7 +357,7 @@ def judge_exceptions(payload):
     for index, batch in enumerate(batches):
         request = {'candidates': batch, 'context': validated['context'],
                    'documentType': validated['documentType'], 'documentPolicy': profile(validated['documentType'])}
-        key = hashlib.sha256(json.dumps({'model': MODEL, 'contractRevision': 4, 'scope': payload.get('_cacheScope'), **request},
+        key = hashlib.sha256(json.dumps({'model': MODEL, 'contractRevision': 5, 'scope': payload.get('_cacheScope'), **request},
                                        sort_keys=True, ensure_ascii=False).encode()).hexdigest()
         record = {'totalBatches': len(batches), 'completedBatches': done, 'currentBatch': index + 1,
                   'attempt': 0, 'maxAttempts': 2, 'errorCode': None}

@@ -1,3 +1,4 @@
+from .llm_config import MODEL, configured
 """Deployment policy for mandatory Upstage analysis; no network operations."""
 import os
 
@@ -22,6 +23,10 @@ def require_api_key() -> None:
         raise StoreError(503, 'UPSTAGE_UNAVAILABLE',
             'Upstage API 키가 설정되지 않아 문서를 분석할 수 없습니다. 서버 설정 후 다시 시도해 주세요.')
 
+    if not configured():
+        raise StoreError(503, 'CLAUDE_UNAVAILABLE',
+            'Claude API 키 또는 판단 모델이 설정되지 않았습니다. 서버 설정 후 다시 시도해 주세요.')
+
 
 def blocked_reason(job: dict):
     if not upstage_required():
@@ -39,14 +44,14 @@ def blocked_reason(job: dict):
                     f'Upstage {label}가 완료되지 않았습니다. 분석을 완료한 뒤 공유용 사본을 만들 수 있습니다.')
     hermes = analysis.get('hermes')
     if not isinstance(hermes, dict):
-        return ('UPSTAGE_ANALYSIS_INCOMPLETE', 'Hermes·SP4 검토 상태를 확인할 수 없습니다.')
+        return ('UPSTAGE_ANALYSIS_INCOMPLETE', 'Hermes·Claude 검토 상태를 확인할 수 없습니다.')
     status = hermes.get('status')
     if status == 'completed':
-        if hermes.get('model') != 'solar-pro4-260806':
-            return ('UPSTAGE_ANALYSIS_INCOMPLETE', '지정된 Solar Pro 4 모델의 검토 완료를 확인할 수 없습니다.')
+        if hermes.get('model') != MODEL:
+            return ('UPSTAGE_ANALYSIS_INCOMPLETE', '지정된 Claude 모델의 검토 완료를 확인할 수 없습니다.')
     elif status != 'not_needed' or hermes.get('required') is not False:
         return ('UPSTAGE_ANALYSIS_INCOMPLETE',
-                '필요한 Hermes·SP4 검토가 완료되지 않았습니다. 분석을 다시 실행해 주세요.')
+                '필요한 Hermes·Claude 검토가 완료되지 않았습니다. 분석을 다시 실행해 주세요.')
     if analysis.get('incomplete'):
         return ('UPSTAGE_ANALYSIS_INCOMPLETE', '분석이 불완전하여 공유용 사본을 완료할 수 없습니다.')
     return None

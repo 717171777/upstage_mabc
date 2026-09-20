@@ -10,8 +10,13 @@ from pathlib import Path
 
 import httpx
 
-MODEL = 'solar-pro4-260806'
-UPSTREAM_URL = 'https://api.upstage.ai/v1/chat/completions'
+if __package__:
+    from .llm_config import MODEL, configured
+    from .claude_transport import make_request, completion_response
+else:
+    from llm_config import MODEL, configured
+    from claude_transport import make_request, completion_response
+UPSTREAM_URL = 'https://api.anthropic.com/v1/messages'
 MAX_INPUT_BYTES = 1 * 1024 * 1024
 MAX_CANDIDATES = 20
 MAX_REQUEST_BODY = 2 * 1024 * 1024
@@ -98,8 +103,8 @@ class GateHandler(BaseHTTPRequestHandler):
             self._send_json(403, {'error': {'message': '공급자 덮어쓰기는 허용되지 않습니다', 'type': 'forbidden', 'code': 403}})
             return
 
-        api_key = os.environ.get('UPSTAGE_API_KEY', '')
-        if not api_key:
+        api_key = os.environ.get('ANTHROPIC_API_KEY', '').strip()
+        if not configured():
             self._send_json(500, {'error': {'message': 'API 키가 설정되지 않았습니다', 'type': 'api_error', 'code': 500}})
             return
 
@@ -109,35 +114,56 @@ class GateHandler(BaseHTTPRequestHandler):
         _forwarded_stats['attempted'] = True
 
         headers = {
-            'Authorization': f'Bearer {api_key}',
+            'x-api-key': api_key,
+            'anthropic-version': '2023-06-01',
             'Content-Type': 'application/json',
         }
 
+        workspace = os.environ.get('ANTHROPIC_WORKSPACE_ID', '').strip()
+        if workspace:
+            headers['anthropic-workspace-id'] = workspace
+        try:
+            upstream_body = make_request(data, MODEL)
+            # Send only the service policy, not Hermes host/profile metadata.
+            upstream_body['system'] = _build_system()
+        except ValueError:
+            self._send_json(400, {'error': {'message': '지원하지 않는 판단 요청 형식입니다'}})
+            return
+
         try:
             with httpx.Client(timeout=GATE_TIMEOUT, follow_redirects=False, trust_env=False) as client:
-                resp = client.post(UPSTREAM_URL, content=body, headers=headers)
+                resp = client.post(UPSTREAM_URL, json=upstream_body, headers=headers)
         except httpx.RequestError as exc:
             _forwarded_stats['errorCode'] = 'UPSTREAM_TIMEOUT' if isinstance(exc, httpx.TimeoutException) else 'NETWORK_ERROR'
             self._send_json(502, {'error': {'message': '외부 모델 요청에 실패했습니다', 'type': 'api_error', 'code': 502}})
             return
 
         if resp.status_code == 200:
+            try:
+                result = completion_response(resp.json(), MODEL)
+            except (ValueError, KeyError, TypeError):
+                _forwarded_stats['errorCode'] = 'RESPONSE_INVALID'
+                self._send_json(502, {'error': {'message': 'Claude 응답 형식이 올바르지 않습니다'}})
+                return
             _forwarded_stats['count'] += 1
             _forwarded_stats['model'] = MODEL
             _forwarded_stats['status'] = 'ok'
-            try:
-                finish = resp.json()['choices'][0].get('finish_reason')
-                if finish in ('stop', 'length', 'content_filter', 'tool_calls'):
-                    _forwarded_stats['finishReason'] = finish
-            except (ValueError, KeyError, IndexError, TypeError):
-                pass
-            ct = resp.headers.get('content-type', 'application/json')
-            raw = resp.content
-            self.send_response(200)
-            self.send_header('Content-Type', ct)
-            self.send_header('Content-Length', str(len(raw)))
-            self.end_headers()
-            self.wfile.write(raw)
+            _forwarded_stats['finishReason'] = result['choices'][0]['finish_reason']
+            if data.get('stream'):
+                # Hermes can request SSE; Claude stays non-streaming so the full
+                # response is validated before any text is returned to Hermes.
+                chunk = {k: result[k] for k in ('id', 'created', 'model')}
+                chunk['object'] = 'chat.completion.chunk'
+                chunk['choices'] = [{'index': 0, 'delta': result['choices'][0]['message'], 'finish_reason': None}]
+                end = {**chunk, 'choices': [{'index': 0, 'delta': {}, 'finish_reason': 'stop'}], 'usage': result['usage']}
+                raw = ('data: ' + json.dumps(chunk) + '\n\n' + 'data: ' + json.dumps(end) + '\n\ndata: [DONE]\n\n').encode()
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/event-stream')
+                self.send_header('Content-Length', str(len(raw)))
+                self.end_headers()
+                self.wfile.write(raw)
+            else:
+                self._send_json(200, result)
         else:
             _forwarded_stats['errorCode'] = ('RATE_LIMIT' if resp.status_code == 429 else 'PROVIDER_UNAVAILABLE' if resp.status_code >= 500 else 'AUTH_ERROR' if resp.status_code in (401, 403) else 'RESPONSE_INVALID')
             self._send_json(resp.status_code, {'error': {'message': '외부 모델 요청에 실패했습니다', 'type': 'api_error', 'code': str(resp.status_code)}})
@@ -156,20 +182,20 @@ def _write_config(hermes_home, gate_base):
     cfg = {
         'model': {
             'default': MODEL,
-            'provider': 'upstage',
+            'provider': 'custom',
             'base_url': gate_base + '/v1',
         },
         'fallback_providers': [],
         'auxiliary': {
             'title_generation': {'enabled': False},
             'compression': {
-                'provider': 'upstage',
+                'provider': 'custom',
                 'model': MODEL,
                 'base_url': gate_base + '/v1',
                 'fallback_chain': [],
             },
             'review': {
-                'provider': 'upstage',
+                'provider': 'custom',
                 'model': MODEL,
                 'base_url': gate_base + '/v1',
                 'fallback_chain': [],
@@ -309,12 +335,12 @@ def main():
     if not hermes_home_path.is_dir():
         _fail('HERMES_HOME 디렉토리가 존재하지 않습니다')
 
-    api_key = os.environ.get('UPSTAGE_API_KEY', '')
-    if not api_key:
-        _fail('UPSTAGE_API_KEY 환경변수가 설정되지 않았습니다')
+    api_key = os.environ.get('ANTHROPIC_API_KEY', '').strip()
+    if not configured():
+        _fail('Claude API 키 또는 GARIMI_CLAUDE_MODEL이 설정되지 않았습니다')
 
     gate_base, server = _start_gate()
-    os.environ['UPSTAGE_BASE_URL'] = gate_base + '/v1'
+    os.environ.pop('UPSTAGE_API_KEY', None)
 
     _write_config(hermes_home_path, gate_base)
 
@@ -338,8 +364,9 @@ def main():
     try:
         agent = AIAgent(
             model=MODEL,
-            provider='upstage',
-            api_key=api_key,
+            provider='custom',
+            api_mode='chat_completions',
+            api_key='local-gate-only',
             base_url=gate_base + '/v1',
             max_iterations=2,
             enabled_toolsets=[],
@@ -351,8 +378,7 @@ def main():
             quiet_mode=True,
             verbose_logging=False,
             max_tokens=6000,
-            reasoning_config={'enabled': True, 'effort': 'low'},
-            request_overrides={'temperature': 0.1},
+            reasoning_config={'enabled': False},
             run_budget_seconds=165,
         )
     except Exception:

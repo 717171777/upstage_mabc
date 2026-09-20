@@ -40,7 +40,7 @@ def test_document_text_serialized_as_data():
 
 @pytest.mark.parametrize('kind,code',[('timeout','UPSTREAM_TIMEOUT'),('network','NETWORK_ERROR'),('429','RATE_LIMIT'),('503','PROVIDER_UNAVAILABLE'),('401','AUTH_ERROR')])
 def test_safe_error_diagnostics_and_one_upstream_request_per_worker(gate,monkeypatch,kind,code):
-    monkeypatch.setenv('UPSTAGE_API_KEY','synthetic-never-sent')
+    monkeypatch.setenv('ANTHROPIC_API_KEY','synthetic-never-sent')
     monkeypatch.setattr(w,'_forwarded_stats',{'count':0,'model':None,'status':None,'finishReason':None,'errorCode':None,'attempted':False})
     calls=[]
     class Client:
@@ -53,7 +53,7 @@ def test_safe_error_diagnostics_and_one_upstream_request_per_worker(gate,monkeyp
             if kind=='network':raise w.httpx.ConnectError('private upstream detail')
             return w.httpx.Response(int(kind),json={'error':'private upstream detail'})
     monkeypatch.setattr(w.httpx,'Client',Client)
-    first,body=status(gate+'/v1/chat/completions',{'model':w.MODEL})
+    first,body=status(gate+'/v1/chat/completions',{'model':w.MODEL,'messages':[{'role':'user','content':'synthetic'}]})
     assert first in (502,429,503,401) and b'private upstream detail' not in body
     assert w._forwarded_stats['errorCode']==code
     assert status(gate+'/v1/chat/completions',{'model':w.MODEL})[0]==400

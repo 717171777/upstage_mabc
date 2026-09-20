@@ -1,3 +1,4 @@
+from .llm_config import MODEL, configured
 import json
 import os
 import sys
@@ -58,7 +59,7 @@ def _handler(params, **kwargs):
             job['runtime'] = {
                 'platform': 'Hermes',
                 'execution': 'registered_extension',
-                'model': 'solar-pro4-260806',
+                'model': MODEL,
                 'llmUsed': job.get('analysis', {}).get('hermes', {}).get('status') == 'completed' or (job.get('aiReview') or {}).get('stages', {}).get('hermes', {}).get('status') == 'completed'
             }
 

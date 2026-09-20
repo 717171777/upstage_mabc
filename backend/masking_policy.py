@@ -1,4 +1,4 @@
-"""Deterministic, end-exclusive presets available to the SP4 recommendation validator."""
+"""Deterministic, end-exclusive presets available to the Claude recommendation validator."""
 import re
 import unicodedata
 from datetime import date

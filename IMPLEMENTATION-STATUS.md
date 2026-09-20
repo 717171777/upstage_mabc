@@ -3,7 +3,7 @@
 ## 제공 범위
 
 - 텍스트층 PDF→PDF, DOCX→DOCX. 스캔 PDF는 지원하지 않는다.
-- Upstage Parse·Classify·Information Extract를 사용하는 분석과 Hermes·Solar Pro 4의 가림/유지 판단.
+- Upstage Parse·Classify·Information Extract를 사용하는 분석과 Hermes·Claude Sonnet 5의 가림/유지 판단.
 - 상황이 애매한 항목의 확인 질문. 미응답은 전체 가림.
 - 전체 가림 기본값, 사용자의 부분 가림·삭제·유지 선택.
 - 같은 종류·같은 값의 반복 위치 탐색, 미확정 위치에 선택 적용, 직접 확정한 개별 선택 보존.

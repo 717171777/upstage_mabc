@@ -1,3 +1,4 @@
+from .llm_config import MODEL, configured
 import asyncio
 import base64
 import json
@@ -230,8 +231,8 @@ async def health():
     return JSONResponse(
         content={
             "ok": True,
-            "aiConfigured": bool(os.environ.get("UPSTAGE_API_KEY", "").strip()),
-            "model": "solar-pro4-260806",
+            "aiConfigured": bool(os.environ.get("UPSTAGE_API_KEY", "").strip()) and configured(),
+            "model": MODEL,
             "syntheticOnly": not upstage.user_documents_enabled(),
             "upstageRequired": upstage.upstage_required(),
             "platform": "Hermes",

@@ -26,6 +26,7 @@ def required_policy(tmp_path, monkeypatch):
     monkeypatch.setenv('GARIMI_REQUIRE_UPSTAGE', '1')
     monkeypatch.setenv('GARIMI_ALLOW_USER_DOCUMENTS', '1')
     monkeypatch.setenv('UPSTAGE_API_KEY', 'test-placeholder-never-sent')
+    monkeypatch.setenv('ANTHROPIC_API_KEY', 'test-placeholder-never-sent')
     def deny(*args, **kwargs):
         pytest.fail('Policy test attempted an external API or Hermes process')
     monkeypatch.setattr(upstage, '_post_with_retry', deny)
@@ -46,7 +47,7 @@ def seed_completed():
     job, token = store.create_job(SOURCE.read_bytes(), '검증.docx', 'docx', True)
     job['analysis'] = {stage: {'status': 'completed', 'model': f'test-{stage}'}
                        for stage in ('parse', 'classify', 'extract')}
-    job['analysis'].update(hermes={'status': 'completed', 'model': 'solar-pro4-260806', 'required': True}, warnings=[])
+    job['analysis'].update(hermes={'status': 'completed', 'model': 'claude-sonnet-5', 'required': True}, warnings=[])
     plans.apply_plan(job, {'version': job['version'], 'metadataReviewed': True,
         'candidates': [{'id': c['id'], 'method': 'full', 'mask': [], 'confirmed': True}
                        for c in job['candidates']]})
@@ -163,7 +164,7 @@ def test_failed_provider_analysis_leaves_review_without_local_completion(monkeyp
             'parse': {'status': 'failed'}, 'classify': {'status': 'completed'},
             'extract': {'status': 'failed'}}, 'warnings': ['분석 실패'], 'extracted': {}})
     monkeypatch.setattr(judge, 'judge_exceptions', lambda payload: {
-        'status': 'completed', 'model': 'solar-pro4-260806', 'suggestions': [], 'warnings': []})
+        'status': 'completed', 'model': 'claude-sonnet-5', 'suggestions': [], 'warnings': []})
     analysis.run_analysis(job['id'], token)
     fresh = store.load_job(job['id'], token)
     assert fresh['status'] == 'review' and fresh['artifact'] is None

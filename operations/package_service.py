@@ -7,6 +7,7 @@ import zipfile
 ROOT=Path(__file__).resolve().parents[1]
 SINGLES=('package.json','package-lock.json','next.config.ts','tsconfig.json','next-env.d.ts',
  'postcss.config.mjs','eslint.config.mjs','Dockerfile','.dockerignore','.gitignore','AGENTS.md',
+ 'Dockerfile.backend','Dockerfile.backend.dockerignore','CLAUDE-DEPLOYMENT.md',
  'START-HERE.md','IMPLEMENTATION-STATUS.md','SERVICE-RUNTIME-POLICY.md',
  'PRD-IMPLEMENTATION-ANCHOR.md','REVIEW-AND-AUTO-COPY-2026-09-16.md','RESUMABLE-ANALYSIS-2026-09-16.md')
 TREES=('src','public','backend','deploy','reference/schemas','fixtures/eval_v0')
@@ -28,7 +29,7 @@ def files():
   yield p,rel.as_posix()
 
 def main():
- target=ROOT/'releases'/'garimi-service-source-2026-09-16.zip';target.parent.mkdir(exist_ok=True)
+ target=ROOT/'releases'/'garimi-service-claude-sonnet-2026-09-20.zip';target.parent.mkdir(exist_ok=True)
  records=[]
  with zipfile.ZipFile(target,'w',zipfile.ZIP_DEFLATED) as z:
   for p,name in files():

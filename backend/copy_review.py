@@ -7,12 +7,13 @@ from pathlib import Path
 
 from . import store, plans, upstage, workflow_files
 from .copy_review_worker import run_review
+from .llm_config import configured
 
 
 def start(job, payload, token, executor, capacity):
     plans.check_version(job, payload.get('version'))
 
-    if job.get('aiEnabled') is not True or not os.environ.get('UPSTAGE_API_KEY'):
+    if job.get('aiEnabled') is not True or not os.environ.get('UPSTAGE_API_KEY') or not configured():
         raise store.StoreError(400, 'ai_disabled', 'AI 검토가 비활성화되었거나 API 키가 설정되지 않았습니다.')
 
     if not upstage.can_analyze_document(store.source_path(job)):
