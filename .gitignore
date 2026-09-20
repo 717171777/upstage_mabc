@@ -32,3 +32,4 @@ _secrets*
 # 도커·로컬 실행 부산물(필요 시)
 docker-compose.yml
 *.pid
+*.tsbuildinfo

@@ -75,7 +75,7 @@ def rule_candidates(inspection):
 
     resident_re = re.compile(r"(?<!\d)\d{6}[- ]?[1-4]\d{6}(?!\d)")
     foreign_re = re.compile(r"(?<!\d)\d{6}[- ]?[5-8]\d{6}(?!\d)")
-    phone_re = re.compile(r"(?<!\d)(?:01[016789]|0\d{1,2})[- ]?\d{3,4}[- ]?\d{4}(?!\d)")
+    phone_re = re.compile(r"(?<![\d\-.])(?:01[016789]|0\d{1,2})[- ]?\d{3,4}[- ]?\d{4}(?!\d)")
     email_re = re.compile(r"[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}")
 
     candidates = []

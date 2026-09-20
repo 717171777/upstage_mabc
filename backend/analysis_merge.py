@@ -78,6 +78,41 @@ def _known_email_locations(inspection, candidates, extracted_value):
     return found
 
 
+_WHITESPACE_RECONCILED_TYPES = frozenset({
+    'phone', 'resident_id', 'foreign_id', 'passport', 'driver_license',
+    'account', 'card', 'dob', 'management_id',
+})
+
+
+def _known_value_locations(inspection, candidates, extracted_value, pii_type):
+    """Reconcile whitespace-split extractions with an already grounded candidate.
+
+    Mirrors _known_email_locations: whitespace is the only difference tolerated,
+    the location always comes from a candidate that is already literally grounded
+    in the source text, and distinct grounded values remain ambiguous. Address and
+    email keep their own dedicated reconcilers; free-text types are excluded because
+    a whitespace-insensitive comparison is not meaningful for prose.
+    """
+    if pii_type not in _WHITESPACE_RECONCILED_TYPES or not isinstance(extracted_value, str):
+        return []
+    stripped = re.sub(r'\s+', '', extracted_value)
+    if not stripped or stripped == extracted_value:
+        return []
+    texts = {unit['id']: unit['text'] for unit in inspection.get('units', [])}
+    found = []
+    for candidate in candidates:
+        start, end = candidate.get('start'), candidate.get('end')
+        value = candidate.get('value')
+        text = texts.get(candidate.get('unitId'), '')
+        if (candidate.get('type') == pii_type and candidate.get('locationResolved') is True
+                and isinstance(value, str)
+                and type(start) is int and type(end) is int
+                and 0 <= start < end <= len(text) and text[start:end] == value
+                and re.sub(r'\s+', '', value) == stripped):
+            found.append(candidate)
+    return found if len({candidate['value'] for candidate in found}) == 1 else []
+
+
 def merge_extractions(job, result):
     """
     job['candidates']와 job['analysis']를 수정합니다.
@@ -272,6 +307,15 @@ def merge_extractions(job, result):
 
             if not matches and pii_type == 'address' and fmt == 'docx':
                 known = _known_docx_address_locations(job.get('_inspection', {}), candidates, raw_value)
+                if known:
+                    for candidate in known:
+                        _record_extraction_variant(candidate, raw_value)
+                        _attach_evidence(candidate, candidate['unitId'], role_raw, context_raw)
+                    continue
+
+            if not matches:
+                known = _known_value_locations(
+                    job.get('_inspection', {}), candidates, raw_value, pii_type)
                 if known:
                     for candidate in known:
                         _record_extraction_variant(candidate, raw_value)

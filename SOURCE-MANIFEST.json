@@ -62,7 +62,7 @@
     },
     {
       "path": "backend/analysis_merge.py",
-      "sha256": "d06bd8318dbe84ec676c1b1bb395ef38b8147f3ed6adbffc11bdf57ee0071a50"
+      "sha256": "4536d05c622ec3261e420b6c638805cf7c7411147cdf1e0054a07a7bb989d6e7"
     },
     {
       "path": "backend/auto_export.py",
@@ -98,7 +98,7 @@
     },
     {
       "path": "backend/engine.py",
-      "sha256": "3fad78278631578383f3a3295c0e87831cf736fe816825458c85d0166c17861a"
+      "sha256": "3c7c1509e1c581c1512f9fbc4102efc03f5a9d3708314938f6cd6ac6951a327a"
     },
     {
       "path": "backend/hermes_extension.py",
@@ -603,6 +603,10 @@
     {
       "path": "verification/test_upstage_required.py",
       "sha256": "7c0b2b0cb41c2f615131f03d13edd01e8c2213b29c6696f8b2b0faf115b465fc"
+    },
+    {
+      "path": "verification/test_whitespace_reconciliation.py",
+      "sha256": "8bd3dcce572aa0ad939e635e72f048d6470e4c193dfd5407d09561a4006e5a14"
     },
     {
       "path": "verification/test_worker_gate.py",
