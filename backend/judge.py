@@ -102,9 +102,15 @@ def _validate_payload(payload):
         # 한해, 제출 상황이 주어졌을 때만 완화 프리셋을 고를 수 있다.
         # 구간은 서버가 계산하며 모델은 id만 고른다. 고르지 않으면 전체 가림.
         if context.get('recipient') or context.get('purpose'):
-            c['selectablePresets'] = sorted(model_selectable_presets(c))
+            presets = model_selectable_presets(c)
+            c['selectablePresets'] = sorted(presets)
+            # 각 방식이 무엇을 드러내는지 보여 준다. 가린 결과만 담으므로
+            # 원문 값 이상의 정보는 나가지 않는다.
+            c['presetPreviews'] = {pid: _render_mask(c['value'], mask)
+                                   for pid, mask in presets.items()}
         else:
             c['selectablePresets'] = []
+            c['presetPreviews'] = {}
 
     return {
         'jobWorkspace': jobWorkspace,
@@ -113,6 +119,15 @@ def _validate_payload(payload):
         'candidates': candidates,
     }, []
 
+
+
+def _render_mask(value, mask):
+    """프리셋 미리보기. 가림 문자는 문서 렌더링과 같은 * 이다."""
+    chars = list(value)
+    for start, end in mask:
+        for i in range(start, end):
+            chars[i] = '*'
+    return ''.join(chars)
 
 def _validate_job_workspace(path):
     garimi = os.environ.get('GARIMI_DATA_DIR')

@@ -78,3 +78,38 @@ def test_preset_dropped_when_recommendation_is_not_full():
         hermes_worker._validate_suggestions([compact(recommendation='keep', evidence='대표 전화')]),
         [candidate(role='대표 전화')], '')
     assert 'presetId' not in checked[0]
+
+
+# --- 모델 지침과 미리보기 -------------------------------------------------
+
+def test_model_sees_what_each_preset_reveals():
+    built, _ = judge._validate_payload(payload({'recipient': '카페24', 'purpose': '담당자 연락처 대조'}))
+    previews = built['candidates'][0]['presetPreviews']
+    assert previews['phone_middle'] == '010-****-5678'
+    assert previews['phone_tail'] == '010-1234-****'
+    assert set(previews) == set(built['candidates'][0]['selectablePresets'])
+
+
+def test_no_previews_without_submission_context():
+    built, _ = judge._validate_payload(payload({}))
+    assert built['candidates'][0]['presetPreviews'] == {}
+
+
+def test_preview_never_contains_more_than_the_original_value():
+    built, _ = judge._validate_payload(payload({'purpose': '제출'}))
+    value = candidate()['value']
+    for text in built['candidates'][0]['presetPreviews'].values():
+        assert len(text) == len(value)
+        assert all(a == b or a == '*' for a, b in zip(text, value))
+
+
+def test_system_prompt_permits_presets_but_keeps_safe_default():
+    """지침이 다시 프리셋 금지로 돌아가지 않도록 고정한다."""
+    system = hermes_worker._build_system()
+    assert '일부 가림 방법은 판단하지 않습니다' not in system
+    assert 'presetId, 가림 범위' not in system
+    assert 'selectablePresets' in system and 'presetPreviews' in system
+    assert '생략하면 전체 가림' in system
+    # 이진 판단 규칙은 그대로 남아 있어야 한다
+    assert "recommendation('full' 또는 'keep')" in system
+    assert 'keep 항목에는 presetId를 붙이지 마십시오' in system

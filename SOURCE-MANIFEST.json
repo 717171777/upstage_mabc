@@ -106,7 +106,7 @@
     },
     {
       "path": "backend/hermes_worker.py",
-      "sha256": "bf70996e5957c35c5f8d261ce731e0007366a8850fc36eb80fa03fc7b985d441"
+      "sha256": "e3191aca8a93575779c7f12d5659c7d68f65f0250810661b2d12aada48ffc4c0"
     },
     {
       "path": "backend/http_policy.py",
@@ -114,7 +114,7 @@
     },
     {
       "path": "backend/judge.py",
-      "sha256": "c5788a1ba800efb375e577f6424952b384652deaf654f447bfd909434e83fdf0"
+      "sha256": "8ec3d3cf7a89b048d793e1ecd9e959c4db43c035f3e194132dae7dfa12d934cb"
     },
     {
       "path": "backend/llm_config.py",
@@ -578,7 +578,7 @@
     },
     {
       "path": "verification/test_preset_recommendation.py",
-      "sha256": "f07e9755b6ac04f37a08fb529c453fd1b0a428a1c952addab96ad94dc2ef2318"
+      "sha256": "ce209fed80126f6a3bc5da78c45a37bfa8dd900928313abbce10110e6ce292c4"
     },
     {
       "path": "verification/test_repeat_decisions.cjs",
