@@ -63,7 +63,7 @@ function resolveRoute(parts: string[], method: string): RouteConfig | null {
     if (action === 'plan' && method === 'PATCH') {
       return { backendPath: `/jobs/${id}/plan`, method: 'PATCH', bodyLimit: OTHER_LIMIT, allowedQueries: new Set(), queryValidators: {} };
     }
-    if (['manual', 'resolve', 'context', 'render', 'ack', 'auto-export', 'ai-review', 'retry-analysis', 'prepare-export'].includes(action) && method === 'POST') {
+    if (['manual', 'resolve', 'context', 'render', 'ack', 'auto-export', 'ai-review', 'retry-analysis'].includes(action) && method === 'POST') {
       return { backendPath: `/jobs/${id}/${action}`, method: 'POST', bodyLimit: OTHER_LIMIT, allowedQueries: new Set(), queryValidators: {} };
     }
     if (action === 'preview' && method === 'GET') {

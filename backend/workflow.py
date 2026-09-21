@@ -165,7 +165,7 @@ def _execute(operation, args):
         raise store.StoreError(422, "UNKNOWN_OPERATION", "지원하지 않는 작업입니다.")
 
     ALLOWED = {"create", "get", "plan", "manual", "resolve", "context",
-               "render", "preview", "page", "ack", "download", "delete", "auto-export", "ai-review", "retry-analysis", "prepare-export"}
+               "render", "preview", "page", "ack", "download", "delete", "auto-export", "ai-review", "retry-analysis"}
 
     if operation not in ALLOWED:
         raise store.StoreError(422, "UNKNOWN_OPERATION", "지원하지 않는 작업입니다.")
@@ -245,12 +245,6 @@ def _execute(operation, args):
             plans.apply_plan(job, payload)
             store.invalidate(job)
             store.save_job(job)
-            return store.public_job(job)
-
-        if operation == "prepare-export":
-            if plans.prepare_export(job, payload):
-                store.invalidate(job)
-                store.save_job(job)
             return store.public_job(job)
 
         if operation == "manual":

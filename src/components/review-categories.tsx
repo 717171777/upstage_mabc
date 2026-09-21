@@ -52,7 +52,7 @@ export function ReviewCategories({candidates, activeType, selected, visibleGroup
           <span className="min-w-0 break-all font-medium">{group[0].value}</span>
           <span className="shrink-0 text-right text-xs text-slate-500">
             <span className="block">{group.length}곳 · {new Set(group.map(candidate => candidate.method)).size > 1 ? '위치마다 다름' : METHOD_LABELS[group[0].method]}</span>
-            <span className="mt-1 block">{manual ? `직접 설정 ${manual}곳` : '기본 설정'}</span>
+            <span className="mt-1 block">{manual ? `설정 적용 ${manual}곳` : '기본 설정'}</span>
             {unresolved > 0 && <span className="mt-1 block text-amber-700">위치 연결 필요 {unresolved}곳</span>}
           </span>
           <span aria-hidden="true" className="text-lg text-slate-400">›</span>

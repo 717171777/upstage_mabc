@@ -4,7 +4,7 @@ import {useApp} from '@/contexts/AppContext';
 import {ServiceShell, AnalysisStatus, EmptyJob, LegacyJobNotice} from '@/components/service-shell';
 import {DocumentView} from '@/components/document-view';
 import {ReviewCategories} from '@/components/review-categories';
-import {changedPreviewDecisions, isUserDecision} from '@/lib/review-flow';
+import {changedPreviewDecisions, exportPlanDecisions, isUserDecision} from '@/lib/review-flow';
 import {CandidateEditor} from '@/components/candidate-editor';
 import {Job, Candidate, Method, PiiType, PII_LABELS, DOCTYPE_LABELS} from '@/lib/service';
 import {useState, useRef, useEffect, useMemo, useCallback} from 'react';
@@ -170,7 +170,8 @@ export default function DecisionPage() {
     }
     lock.current=true;setWorking(true);setError(null);
     try{
-      await mutate('prepare-export',{candidates:draftChanges});
+      const decisions=exportPlanDecisions(candidates,draftChanges);
+      if(decisions.length)await mutate('plan',{candidates:decisions});
       router.push('/export');
     }catch(e){setError(e instanceof Error?e.message:String(e));}
     finally{lock.current=false;setWorking(false);}
@@ -182,10 +183,10 @@ export default function DecisionPage() {
   return <ServiceShell step={2} title="가림 검토">
     <div className="sticky top-0 z-20 -mx-1 mb-5 rounded-2xl border border-slate-200 bg-white/95 p-4 backdrop-blur">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div><p className="font-semibold text-slate-800">개인정보 {candidates.length}곳 · 직접 설정 {customized}곳</p><p className="mt-1 text-xs text-slate-500">검토는 선택 사항이에요. 필요한 정보만 바꾸고 다음으로 이동하세요.</p></div>
+        <div><p className="font-semibold text-slate-800">개인정보 {candidates.length}곳 · 설정 적용 {customized}곳</p><p className="mt-1 text-xs text-slate-500">검토는 선택 사항이에요. 필요한 정보만 바꾸고 다음으로 이동하세요.</p></div>
         <button onClick={()=>void requestExport()} disabled={disabled} className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white disabled:opacity-40">{working?'설정 반영 중…':'이 설정으로 다음 →'}</button>
       </div>
-      <p className="mt-3 text-xs text-slate-500">{proceedReason||'수정하지 않은 항목은 현재 기본 설정을 사용합니다. 다음 단계에서 원본과 공유본을 비교할 수 있어요.'}</p>
+      <p className="mt-3 text-xs text-slate-500">{proceedReason||'다음을 누르면 현재 설정을 한 번에 적용해요. 이어서 원본과 공유본을 비교할 수 있어요.'}</p>
       {previewPending&&<p role="status" className="mt-2 text-xs text-blue-700">{draftInvalid?'일부 가림의 범위를 완성해 주세요.':'선택 중인 변경도 다른 항목이나 다음 단계로 이동할 때 반영됩니다.'}</p>}
     {pendingQuestions.length > 0 && <section aria-label="확인할 AI 질문" className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-blue-100 pt-3">
       <div><p className="text-sm font-semibold text-blue-800">추가 질문 {pendingQuestions.length}개 · 선택 사항</p><p className="mt-1 text-xs text-slate-600">문서 근거와 공유 상황만으로 판단하기 어려운 항목이에요. 미응답 항목은 전체 가림합니다.</p></div>
@@ -214,7 +215,7 @@ export default function DecisionPage() {
             onTypeChange={type=>void selectCandidate(null,type)} onSelect={id=>void selectCandidate(id)} disabled={!!disabled}/>
           <details className="border-t border-slate-200 px-4 py-3 text-xs"><summary className="cursor-pointer text-slate-500">이 유형에서 찾기·일괄 처리</summary><div className="mt-3 space-y-3">
             <input aria-label="개인정보 검색" placeholder="선택한 유형에서 검색" value={search} onChange={e=>setSearch(e.target.value)} className="w-full rounded-lg border border-slate-200 p-2"/>
-            <select aria-label="표시할 정보" value={filter} onChange={e=>setFilter(e.target.value)} className="rounded border p-2"><option value="all">전체</option><option value="mask">가림</option><option value="keep">유지</option><option value="custom">직접 설정</option></select>
+            <select aria-label="표시할 정보" value={filter} onChange={e=>setFilter(e.target.value)} className="rounded border p-2"><option value="all">전체</option><option value="mask">가림</option><option value="keep">유지</option><option value="custom">설정 적용</option></select>
             <button disabled={disabled||!bulkItems.length} className="block text-blue-600 disabled:opacity-40" onClick={()=>{void save(bulkItems.map(c=>({id:c.id,method:'full',mask:[],confirmed:true}))).catch(e=>setError(String(e)));}}>표시된 {bulkItems.length}곳 전체 가림 적용</button>
           </div></details>
         </section>}
@@ -222,7 +223,7 @@ export default function DecisionPage() {
           <CandidateEditor suggestion={selectedSuggestion} key={selected.id} candidate={selected} all={candidates} busy={!!disabled} onSave={save} onDone={()=>void selectCandidate(null)} keyboardMode={keyboardMode} onKeyboardModeChange={setKeyboardMode} onNavigate={navigate} onPreviewChange={updatePreview} onPreviewStart={startPreview}/>
           <details className="rounded-xl border border-slate-200 bg-white px-4 py-3">
             <summary className="cursor-pointer text-xs text-slate-600">문서에서 위치 확인 · {currentGroup.length}곳</summary>
-            <div className="mt-3 flex flex-wrap gap-2">{currentGroup.map((c,i)=><button key={c.id} disabled={!!disabled} aria-label={`같은 정보 ${i+1}번째 위치`} aria-pressed={c.id===selected.id} onClick={()=>void selectCandidate(c.id)} className={`min-h-9 rounded-lg border px-2 py-1 text-xs disabled:opacity-40 ${!c.locationResolved?'border-amber-600 bg-amber-50 text-amber-800':c.id===selected.id?'border-blue-500 bg-blue-50 text-blue-700':'border-slate-200 bg-white'}`}>{i+1}번째{!c.locationResolved?' · 위치 연결':isUserDecision(c)?' · 직접 설정':''}</button>)}</div>
+            <div className="mt-3 flex flex-wrap gap-2">{currentGroup.map((c,i)=><button key={c.id} disabled={!!disabled} aria-label={`같은 정보 ${i+1}번째 위치`} aria-pressed={c.id===selected.id} onClick={()=>void selectCandidate(c.id)} className={`min-h-9 rounded-lg border px-2 py-1 text-xs disabled:opacity-40 ${!c.locationResolved?'border-amber-600 bg-amber-50 text-amber-800':c.id===selected.id?'border-blue-500 bg-blue-50 text-blue-700':'border-slate-200 bg-white'}`}>{i+1}번째{!c.locationResolved?' · 위치 연결':isUserDecision(c)?' · 설정 적용':''}</button>)}</div>
             {selected.locationContext&&<div className="mt-3 text-xs text-slate-500"><p>{selected.locationContext.section||'선택한 정보의 위치'}</p><p className="mt-1">{selected.locationContext.label}</p>{selected.linkedValue&&<p className="mt-1">줄바꿈된 정보의 일부 · {selected.linkedValue}</p>}</div>}
           </details>
         </>}

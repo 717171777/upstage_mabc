@@ -298,45 +298,6 @@ def apply_context(job, payload):
             job['documentType'] = payload['documentType']
     return None
 
-
-def prepare_export(job, payload):
-    """Accept the displayed AI defaults, without claiming a human reviewed each item.
-
-    Optional user edits and automatic defaults are validated together before mutation.
-    This prepares a plan only: rendering and final artifact acknowledgement remain separate.
-    """
-    from .processing_requirements import assert_upstage_complete
-    check_version(job, payload.get('version'))
-    assert_upstage_complete(job)
-    analysis = job.get('analysis', {})
-    hermes = analysis.get('hermes', {})
-    if (job.get('aiEnabled') is not True or analysis.get('incomplete')
-            or job.get('processingBlocked') or job.get('upstageReanalysisRequired')
-            or any(analysis.get(stage, {}).get('status') != 'completed' for stage in ('parse', 'classify', 'extract'))
-            or hermes.get('status') not in ('completed', 'not_needed')
-            or (hermes.get('required') is True and hermes.get('status') != 'completed')):
-        raise StoreError(422, 'analysis_incomplete', '문서 분석을 완료한 뒤 다음 단계로 이동해 주세요.')
-    if any(c.get('locationResolved') is not True for c in job['candidates']):
-        raise StoreError(422, 'location_unresolved', '원문 위치를 연결한 뒤 다음 단계로 이동해 주세요.')
-
-    working = copy.deepcopy(job)
-    edits = payload.get('candidates', [])
-    if not isinstance(edits, list) or any(not isinstance(edit, dict) or edit.get('confirmed') is not True for edit in edits):
-        raise StoreError(422, 'invalid_plan', '변경할 가림 설정이 올바르지 않습니다.')
-    apply_plan(working, {'version': payload['version'], 'candidates': edits})
-    automatic_ids = {c['id'] for c in working['candidates'] if not c['confirmed']}
-    defaults = [dict(id=c['id'], method=c['method'], mask=copy.deepcopy(c['mask']), confirmed=True)
-                for c in working['candidates'] if c['id'] in automatic_ids]
-    apply_plan(working, {'version': payload['version'], 'candidates': defaults})
-    for candidate in working['candidates']:
-        if candidate['id'] in automatic_ids:
-            candidate['decisionSource'] = 'ai_automatic'
-        validate_decision(candidate)
-    changed = working['candidates'] != job['candidates']
-    job.clear()
-    job.update(working)
-    return changed
-
 def assert_ready(job):
     from .processing_requirements import assert_upstage_complete
     assert_upstage_complete(job)

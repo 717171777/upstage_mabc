@@ -44,4 +44,18 @@ const changes = api.changedPreviewDecisions(items, [{id:'a',method:'partial',mas
 assert.deepEqual(plain(changes), [{id:'a',method:'partial',mask:[[1,2]],confirmed:true}]);
 assert.equal(items[0].confirmed, false);
 assert.equal(api.changedPreviewDecisions(items, [{id:'missing',method:'keep',mask:[]}]).length, 0);
+const initialJSON=JSON.stringify(items);
+const accepted=api.exportPlanDecisions(items,[{id:'a',method:'partial',mask:[[1,2]]}]);
+assert.deepEqual(plain(accepted),[
+  {id:'a',method:'partial',mask:[[1,2]],confirmed:true},
+  {id:'b',method:'full',mask:[],confirmed:true},
+  {id:'c',method:'full',mask:[],confirmed:true},
+]);
+assert.equal(JSON.stringify(items),initialJSON,'Building a request must not alter the saved plan');
+assert(!accepted.some(d=>d.id==='d'),'An already saved keep must be preserved');
+assert(accepted.every(d=>Object.keys(d).sort().join(',')==='confirmed,id,mask,method'),'Use only original plan fields');
+assert.equal(api.exportPlanDecisions([{...items[0],confirmed:true}]).length,0,'Do not resubmit unchanged accepted settings');
+assert.throws(()=>api.exportPlanDecisions([{...items[0],locationResolved:false}]));
+assert.throws(()=>api.exportPlanDecisions(items,[{id:'missing',method:'keep',mask:[]}]));
+assert.equal(api.exportPlanDecisions([]).length,0);
 console.log('Six primary cards, six persistent extra types, detected counts, repeated locations and preserved decisions passed');

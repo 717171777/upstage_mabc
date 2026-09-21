@@ -313,7 +313,7 @@ export function CandidateEditor({
           <input type="radio" name="scope" className="mt-0.5" checked={scope===key} disabled={disabledAll} onChange={()=>{setScope(key);onPreviewStart?.();}}/>
           {key==='following'?'같은 정보에 함께 적용 (기본)':key==='one'?'이 위치만':key==='sameValue'?'같은 정보의 모든 위치':`모든 ${PII_LABELS[candidate.type]}에 적용`}
         </label>)}
-        <p className="text-xs text-slate-500">{scope==='following'?'다른 위치에서 직접 정한 설정은 바꾸지 않아요.':scope==='sameValue'||scope==='sameType'?'직접 정한 설정도 선택한 방법으로 바뀝니다.':'선택한 한 곳만 바꿔요.'}</p>
+        <p className="text-xs text-slate-500">{scope==='following'?'다른 위치에 이미 적용한 설정은 바꾸지 않아요.':scope==='sameValue'||scope==='sameType'?'이미 적용한 설정도 선택한 방법으로 바뀝니다.':'선택한 한 곳만 바꿔요.'}</p>
         {targets.excluded>0&&<p className="text-xs text-amber-700">위치가 연결되지 않은 {targets.excluded}곳은 제외했어요.</p>}
         {scope==='sameType'&&<ul className="max-h-32 space-y-1 overflow-auto text-xs text-slate-600">{decisions.map(d=>{
           const target=all.find(c=>c.id===d.id)!;
@@ -333,7 +333,7 @@ export function CandidateEditor({
             <button type="button" data-native-keys="true" disabled={disabledAll||!candidate.locationResolved} onClick={()=>void answerQuestion('full')} className="min-h-10 rounded border border-blue-300 bg-white px-3 disabled:opacity-40">아니요, 모두 가리기</button>
             <button type="button" data-native-keys="true" disabled={disabledAll||!candidate.locationResolved} onClick={()=>void answerQuestion('keep')} className="min-h-10 rounded border border-blue-300 bg-white px-3 disabled:opacity-40">네, 그대로 두기</button>
           </div>
-        </>:<p>{isUserDecision(candidate)?'직접 설정':'AI 제안'} · {METHOD_LABELS[isUserDecision(candidate)?candidate.method:suggestion.recommendation??candidate.method]}</p>}
+        </>:<p>{isUserDecision(candidate)?'설정 적용':'AI 제안'} · {METHOD_LABELS[isUserDecision(candidate)?candidate.method:suggestion.recommendation??candidate.method]}</p>}
       </section>
     </details>}
 

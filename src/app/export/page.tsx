@@ -9,6 +9,7 @@ import {useState, useRef, useEffect, useCallback, useMemo} from 'react';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import {isUpstageComplete} from '@/lib/workspace';
+import {exportPlanDecisions} from '@/lib/review-flow';
 
 export default function ExportPage() {
   const {job}=useApp();
@@ -49,12 +50,9 @@ function ExportWorkspace({job}:{job:Job}) {
   const createCopy=useCallback(async()=>{
     if(!job||disabled||lock.current||!allReady)return;lock.current=true;attempted.current=inputKey;setWorking(true);setCopyError('');setError(null);setNotice('');
     try{
-      if(job.candidates.some(c=>!c.confirmed)){
-        const prepared=await mutate('prepare-export',{});
-        attempted.current=JSON.stringify([prepared.version,choices]);
-      }
-      if(dirty||!job.metadataReviewed){
-        const planned=await mutate('plan',{metadataActions:choices,metadataReviewed:true});
+      const decisions=exportPlanDecisions(job.candidates);
+      if(decisions.length||dirty||!job.metadataReviewed){
+        const planned=await mutate('plan',{candidates:decisions,metadataActions:choices,metadataReviewed:true});
         attempted.current=JSON.stringify([planned.version,choices]);
       }
       const updated=await mutate('render',{});

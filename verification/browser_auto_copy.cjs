@@ -25,12 +25,10 @@ const synthetic=()=>({
    calls.push('delete');
    if(failDelete){failDelete=false;return r.fulfill({status:500,contentType:'application/json',body:JSON.stringify({error:'합성 삭제 실패'})});}
    return r.fulfill({status:200,contentType:'application/json',body:JSON.stringify({deleted:true})});
-  }else if(path.endsWith('/prepare-export')){
-   calls.push('prepare-export');assert.equal(r.request().postDataJSON().version,job.version);
-   job={...job,version:job.version+1,candidates:job.candidates.map(c=>c.confirmed?c:{...c,confirmed:true,decisionSource:'ai_automatic'}),artifact:null,acknowledged:false,status:'review'};body=job;
   }else if(path.endsWith('/plan')){
    calls.push('plan');const p=r.request().postDataJSON();assert.equal(p.version,job.version);
-   job={...job,version:job.version+1,metadataReviewed:p.metadataReviewed,metadata:job.metadata.map(m=>({...m,action:p.metadataActions[m.id]})),artifact:null,acknowledged:false,status:'review'};body=job;
+   const updates=new Map((p.candidates??[]).map(c=>[c.id,c]));
+   job={...job,version:job.version+1,candidates:job.candidates.map(c=>updates.has(c.id)?{...c,...updates.get(c.id),decisionSource:'user'}:c),metadataReviewed:p.metadataReviewed??job.metadataReviewed,metadata:job.metadata.map(m=>({...m,action:p.metadataActions?.[m.id]??m.action})),artifact:null,acknowledged:false,status:'review'};body=job;
   }else if(path.endsWith('/render')){
    calls.push('render');assert.equal(r.request().postDataJSON().version,job.version);assert(job.candidates.every(c=>c.confirmed));assert(job.metadataReviewed);
    if(hold){hold=false;await new Promise(resolve=>release=resolve);}
@@ -68,10 +66,10 @@ const synthetic=()=>({
   const afterFailure=count('render');await page.waitForTimeout(1200);assert.equal(count('render'),afterFailure);
   await page.getByRole('button',{name:'사본 생성 다시 시도',exact:true}).click();await saved();assert.equal(count('render'),afterFailure+1);
   // Individual review is optional; displayed defaults are prepared before rendering.
-  job=synthetic();job.candidates[0].confirmed=false;const beforeOptional=count('render');
+  job=synthetic();job.candidates[0].confirmed=false;const beforeOptional=count('render'),beforePlan=count('plan');
   await page.reload({waitUntil:'networkidle'});await saved();
-  assert.equal(count('render'),beforeOptional+1);assert.equal(count('prepare-export'),1);
-  assert.equal(job.candidates[0].method,'full');assert.equal(job.candidates[0].decisionSource,'ai_automatic');
+  assert.equal(count('render'),beforeOptional+1);assert.equal(count('plan'),beforePlan+1);
+  assert.equal(job.candidates[0].method,'full');assert.equal(job.candidates[0].decisionSource,'user');
   // Unknown source locations still prevent creation of a misleading copy.
   job=synthetic();job.candidates[0].locationResolved=false;const beforeUnresolved=count('render');
   await page.reload({waitUntil:'networkidle'});await page.getByText('문서 분석과 원문 위치를 확인해 주세요',{exact:true}).waitFor();

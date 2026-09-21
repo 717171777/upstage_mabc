@@ -232,7 +232,7 @@ function syntheticJob() {
     assert.deepEqual(writes.at(-1).candidates,[{id:'name-a',method:'keep',mask:[],confirmed:true}]);
     assert(await question().getByRole('button',{name:'네, 그대로 두기',exact:true}).isDisabled());
     releasePlan();await answerResponse;
-    await question().getByText(/직접 설정/).waitFor();
+    await question().getByText(/설정 적용/).waitFor();
     assert.equal(job.candidates[4].method,'full');assert.equal(job.candidates[4].confirmed,false);
     await page.getByText('추가 질문 1개 · 선택 사항',{exact:true}).waitFor();
     await page.getByRole('button',{name:'질문 확인하기',exact:true}).click();
@@ -245,7 +245,7 @@ function syntheticJob() {
     await page.getByText('추가 질문 1개 · 선택 사항',{exact:true}).waitFor();
     const successAnswer=page.waitForResponse(r=>r.url().endsWith('/plan'));
     await question().getByRole('button',{name:'아니요, 모두 가리기',exact:true}).click();
-    await successAnswer;await question().getByText(/직접 설정/).waitFor();
+    await successAnswer;await question().getByText(/설정 적용/).waitFor();
     assert.equal(job.candidates[4].confirmed,true);assert.equal(job.candidates[4].method,'full');
     assert.equal(await page.getByRole('region',{name:'확인할 AI 질문'}).count(),0);
 

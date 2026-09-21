@@ -35,3 +35,16 @@ export function changedPreviewDecisions(candidates: Candidate[], preview: Previe
     return saved?.locationResolved && (saved.method !== decision.method || JSON.stringify(saved.mask) !== JSON.stringify(decision.mask));
   }).map(decision => ({...decision, confirmed: true as const}));
 }
+
+// The user accepts the displayed settings together when choosing Next.
+// Use only the original plan contract; do not rerun or reinterpret AI suggestions.
+export function exportPlanDecisions(candidates: Candidate[], preview: PreviewDecision[] = []) {
+  if (candidates.some(candidate => !candidate.locationResolved)) throw new Error('원문 위치를 연결한 뒤 다음 단계로 이동해 주세요.');
+  const drafts = new Map(preview.map(decision => [decision.id, decision]));
+  if (preview.some(decision => !candidates.some(candidate => candidate.id === decision.id))) throw new Error('변경할 정보를 다시 선택해 주세요.');
+  return candidates.flatMap(candidate => {
+    const decision = drafts.get(candidate.id) ?? candidate;
+    if (candidate.confirmed && candidate.method === decision.method && JSON.stringify(candidate.mask) === JSON.stringify(decision.mask)) return [];
+    return [{id: candidate.id, method: decision.method, mask: decision.mask.map(([start,end])=>[start,end] as [number,number]), confirmed: true as const}];
+  });
+}
