@@ -160,7 +160,7 @@ def run(job, payload):
     full_count = 0
     partial_count = 0
     keep_count = 0
-    manual_preserved = len(manual_confirmed)
+    manual_preserved = 0 if job.get('fullRedaction') is True else len(manual_confirmed)
     for c in job['candidates']:
         if c.get('confirmed') is True:
             m = c.get('method')

@@ -238,6 +238,10 @@ def run_analysis(jid, token):
 
 def apply_binary_defaults(job):
     """Validated AI choices are drafts, never overwrite confirmed user selections."""
+    if job.get('fullRedaction') is True:
+        from .full_redaction import enforce
+        enforce(job)
+        return
     from .judge import _validate_suggestion
     from .document_policy import candidate_for_judge
     keep_info = job.get('context', {}).get('keepInfo') or ''

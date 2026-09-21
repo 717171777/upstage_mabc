@@ -16,7 +16,7 @@ from .location_context import attach_location_context
 
 
 _LABELS = {
-    'name': ('이름', '성명', '성명(한글)', '성명(영문)', '예금주', '신청인', '신청자', '작성자', '담당자', '대표자', '수령인'),
+    'name': ('이름', '성명', '성명(한글)', '성명(영문)', '예금주', '신청인', '신청자', '작성자', '담당자', '대표자', '수령인', '참가자', '내담자', '상담자'),
     'address': ('주소', '자택주소', '거주지주소', '현주소', '주민등록주소', '배송주소'),
     'dob': ('생년월일', '출생일', '생일', '생년'),
     'passport': ('여권번호', 'passportno', 'passportnumber'),
@@ -27,16 +27,37 @@ _LABELS = {
     'management_id': ('사번', '학번', '직원번호', '회원번호', '고객번호', '환자번호', '수험번호', '개인관리번호', '사원번호'),
 }
 _LABEL_TYPE = {label: typ for typ, labels in _LABELS.items() for label in labels}
+_HEADER_LABELS = frozenset({'연락처', '전화번호', '휴대전화', '휴대폰번호', '이메일', '전자우편',
+                            '주민등록번호', '외국인등록번호', '항목', '비고'})
+# Known labels may follow another value on the same line. Keep generic labels
+# at explicit separators too, so unknown fields still terminate a known value.
+_INLINE_LABEL = re.compile(
+    r'(?<!\S)(' + '|'.join(r'\s*'.join(map(re.escape, label))
+                           for label in sorted(set(_LABEL_TYPE) | _HEADER_LABELS, key=len, reverse=True))
+    + r')\s*[:：]|(?:^|[\n;|\t])\s*([^:\n;|\t]{1,30})\s*[:：]', re.I)
 _EMPTY = {'해당없음', '없음', '미발급', '미기재', '비공개', '작성중', '검토메모', '확인필요', '담당자', '성명', '이름'}
 _DATE = re.compile(r'(?:(\d{4})[-./년]\s*(\d{1,2})[-./월]\s*(\d{1,2})\s*일?|(\d{4})(\d{2})(\d{2}))\.?')
 _NUMERIC = re.compile(r'[0-9]+(?:[ \t-][0-9]+)*')
 _ADDRESS_START = re.compile(r'^(?:\(\d{5}\)\s*)?(?:서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충청|충북|충남|전라|전북|전남|경상|경북|경남|제주)')
 _ADDRESS_DETAIL = re.compile(r'\d+\s*(?:동|호|층|번지)(?:\b|\s|$)')
 _NAME_SUFFIX = re.compile(r'(?:(?:님|씨))?(?:께서|에게는|에게|한테|으로|과|와|은|는|이|가|을|를|의|도)?(?=$|[\s.,，。:;!?()\[\]·/])')
+# Numbered fields have constrained shapes and can be grounded without a colon.
+# Do not extend this to arbitrary names/prose: those still require field evidence.
+_STRUCTURED_INLINE = (
+    ('account', re.compile(r'(?<![가-힣A-Za-z0-9_])(?:입금\s*계좌|계좌번호|계좌)(?:\s*[:：(]\s*|\s+)(?:[가-힣]{2,12}\s+)?([0-9]+(?:[- ][0-9]+){1,4})(?![0-9-])')),
+    ('card', re.compile(r'(?<![가-힣A-Za-z0-9_])(?:법인카드\s*정산|신용카드번호|카드번호)(?:\s*[:：]\s*|\s+)([0-9]{4}(?:[- ][0-9]{4}){3})(?![0-9-])')),
+    ('passport', re.compile(r'(?<![가-힣A-Za-z0-9_])(?:여권번호|여권)\s*[:：]?\s+([A-Z0-9]{6,12})(?![A-Za-z0-9_-])')),
+    ('driver_license', re.compile(r'(?<![가-힣A-Za-z0-9_])(?:운전면허번호|운전면허|면허)\s*[:：]?\s+((?:[0-9]{2}|[가-힣]{2,4})[- ][0-9]{2}[- ][0-9]{6}[- ][0-9]{2}|[0-9]{12})(?![A-Za-z0-9_-])')),
+    ('management_id', re.compile(r'(?<![가-힣A-Za-z0-9_])(?:사번|학번|직원번호|회원번호|고객번호|환자번호|수험번호|개인관리번호|사원번호)\s*[:：]?\s+([A-Za-z0-9][A-Za-z0-9_-]{2,63})(?![A-Za-z0-9_-])')),
+    ('dob', re.compile(r'(?<![가-힣A-Za-z0-9_])(?:생년월일|출생일)\s*[:：]?\s+(\d{4}[-./]\d{1,2}[-./]\d{1,2})(?![0-9])')),
+)
 
 
 def _label_type(text):
     key = re.sub(r'\s+', '', text).strip(':：.·*[]').lower()
+    # Contract-party qualifiers belong to the label, not to the address value.
+    if key in ('갑의주소', '을의주소', '병의주소', '정의주소'):
+        return 'address'
     return _LABEL_TYPE.get(key)
 
 
@@ -53,6 +74,8 @@ def _valid_value(typ, value):
     if not value or len(value) > 300 or _label_type(value) or re.sub(r'\s+', '', value) in _EMPTY:
         return False
     if typ == 'name':
+        if re.sub(r'\s+', '', value).strip(':：.·*[]') in _HEADER_LABELS:
+            return False
         return bool(re.fullmatch(r'[가-힣A-Za-z][가-힣A-Za-z\'-]{1,29}(?:[ \t][가-힣A-Za-z][가-힣A-Za-z\'-]{0,29}){0,3}', value)) and len(value) <= 80
     if typ == 'address':
         return len(value) >= 8 and bool(re.search(r'\d', value)) and bool(
@@ -152,16 +175,22 @@ def detect_local(path: Path, inspection: dict) -> list[dict]:
 
     for unit in units:
         text = unit.get('text', '')
+        for typ, pattern in _STRUCTURED_INLINE:
+            for match in pattern.finditer(text):
+                start, end = match.span(1)
+                if _valid_value(typ, text[start:end]):
+                    add(unit, typ, start, end, _proof(unit, 'inline_label', match.start(), start))
         # Inline fields need an explicit colon; a prose mention of "생년월일"
         # or a heading such as "담당자 검토 메모" is not a labelled value.
-        inline = list(re.finditer(r'(^|[\n;|\t])\s*([^:\n;|\t]{1,30})\s*[:：]', text))
+        inline = list(_INLINE_LABEL.finditer(text))
         for index, match in enumerate(inline):
-            typ = _label_type(match.group(2))
+            label_group = 1 if match.group(1) is not None else 2
+            typ = _label_type(match.group(label_group))
             if not typ:
                 continue
             start, end = _trim(text, match.end(), inline[index+1].start() if index+1 < len(inline) else len(text))
             if _valid_value(typ, text[start:end]):
-                add(unit, typ, start, end, _proof(unit, 'inline_label', match.start(2), match.end(2)))
+                add(unit, typ, start, end, _proof(unit, 'inline_label', match.start(label_group), match.end(label_group)))
 
         start, end = _trim(text)
         value = text[start:end]

@@ -123,6 +123,7 @@ export interface Suggestion {
 }
 
 export interface Job {
+  fullRedaction?: boolean;
   analysisResume?: { completedStages: string[]; savedBatches: number };
   id: string;
   version: number;

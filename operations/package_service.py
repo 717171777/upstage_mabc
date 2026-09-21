@@ -8,10 +8,12 @@ ROOT=Path(__file__).resolve().parents[1]
 SINGLES=('package.json','package-lock.json','next.config.ts','tsconfig.json','next-env.d.ts',
  'postcss.config.mjs','eslint.config.mjs','Dockerfile','.dockerignore','.gitignore','AGENTS.md',
  'Dockerfile.backend','Dockerfile.backend.dockerignore','CLAUDE-DEPLOYMENT.md',
+ 'VERIFICATION-2026-09-21.md',
  'START-HERE.md','IMPLEMENTATION-STATUS.md','SERVICE-RUNTIME-POLICY.md',
  'PRD-IMPLEMENTATION-ANCHOR.md','REVIEW-AND-AUTO-COPY-2026-09-16.md','RESUMABLE-ANALYSIS-2026-09-16.md')
 TREES=('src','public','backend','deploy','reference/schemas','fixtures/eval_v0')
 TESTS=('verification/browser_auto_copy.cjs','verification/browser_decision_keyboard.cjs',
+ 'verification/browser_full_redaction.cjs','verification/audit_local_detection.py',
  'verification/test_repeat_decisions.cjs','verification/test_masking.cjs',
  'verification/email_preset_cases.json','verification/semantic_preset_cases.json')
 

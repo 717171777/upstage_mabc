@@ -29,6 +29,20 @@ def _record_extraction_variant(candidate, value):
         variants.append(value)
 
 
+def _passport_locations(inspection, value, matches):
+    """Never anchor a passport fragment inside a different identifier.
+
+    Uncertain extractions remain unresolved for review rather than silently
+    disappearing or applying a mask to an unrelated substring.
+    """
+    if not isinstance(value, str) or not re.fullmatch(r'(?=.*[0-9])[A-Z0-9]{6,12}', value):
+        return []
+    texts = {unit['id']: unit['text'] for unit in inspection.get('units', [])}
+    return [match for match in matches
+            if not re.search(r'[A-Za-z0-9_-]$', texts[match['unitId']][:match['start']])
+            and not re.match(r'[A-Za-z0-9_-]', texts[match['unitId']][match['end']:])]
+
+
 def _known_docx_address_locations(inspection, candidates, extracted_value):
     """Match whitespace variants only to one already grounded literal address.
 
@@ -288,6 +302,8 @@ def merge_extractions(job, result):
 
             # locate_value: 정확한 문자열 일치 위치만
             matches = locate_value(job.get('_inspection', {}), raw_value)
+            if pii_type == 'passport':
+                matches = _passport_locations(job.get('_inspection', {}), raw_value, matches)
 
             if not matches and pii_type == 'address' and fmt == 'pdf':
                 matches = locate_multiline_address(job.get('_inspection', {}), raw_value)
@@ -527,3 +543,5 @@ def merge_extractions(job, result):
 
     # --- 최종 반영 ---
     job['candidates'] = candidates
+    from .full_redaction import enforce
+    enforce(job)

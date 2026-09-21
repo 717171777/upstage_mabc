@@ -72,7 +72,7 @@ export default function DecisionPage() {
   const currentGroup=selected?groups.find(g=>groupKey(g[0])===groupKey(selected))??[]:[];
   const confirmed=candidates.filter(c=>c.confirmed).length;
   const unresolved=candidates.filter(c=>!c.locationResolved).length;
-  const canExport=!!job && isUpstageComplete(job) && confirmed===candidates.length && !unresolved && !job.analysis.incomplete && !disabled;
+  const canExport=!!job && isUpstageComplete(job) && confirmed===candidates.length && !unresolved && !job.analysis.incomplete && !(job.fullRedaction && job.uninspected.length) && !disabled;
   const failedAI=job&&(['parse','classify','extract','hermes'] as const).some(k=>job.analysis[k].status==='failed');
   const quickReason=!job?.aiEnabled?'문서를 새로 올려 Upstage 분석을 시작해 주세요.':failedAI?'Upstage 분석 일부가 실패했습니다. AI 검토로 다시 시도해 주세요.':!isUpstageComplete(job)?'Upstage 분석을 완료해야 파일을 받을 수 있습니다.':unresolved?`원문 위치 ${unresolved}곳을 연결하면 바로 받을 수 있습니다.`:job.uninspected.length?'검사하지 못한 영역이 있어 직접 확인이 필요합니다.':'';
   const hits=job?findOccurrences(job,manualQuery):[];
@@ -103,9 +103,9 @@ export default function DecisionPage() {
     }
   };
   const undoLast=useCallback(async()=>{
-    if(disabled||!undo.length)return;
+    if(disabled||job?.fullRedaction||!undo.length)return;
     try{await mutate('plan',{candidates:undo[undo.length-1].filter(d=>candidates.some(c=>c.id===d.id))});setUndo(s=>s.slice(0,-1));setSelectedId(null);setNotice('직전 선택을 되돌렸습니다.');}catch(e){setError(e instanceof Error?e.message:String(e));}
-  },[disabled,undo,mutate,candidates,setError]);
+  },[disabled,job?.fullRedaction,undo,mutate,candidates,setError]);
   useEffect(()=>{
     const key=(e:KeyboardEvent)=>{if(e.defaultPrevented || (e.target as HTMLElement).closest('input,textarea,select,[contenteditable="true"]'))return;if((e.metaKey||e.ctrlKey)&&e.key==='z'){e.preventDefault();void undoLast();}};
     window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);
@@ -154,11 +154,11 @@ export default function DecisionPage() {
     <div className="sticky top-0 z-20 -mx-1 mb-5 rounded-2xl border border-slate-200 bg-white/95 p-4 backdrop-blur">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div><p className="font-semibold text-slate-800">{confirmed} / {candidates.length}곳 확인</p><p className="mt-1 text-xs text-slate-500">원문에서 정보를 누르고 가림 방법을 고르세요.</p></div>
-        <div className="flex flex-wrap gap-2"><button onClick={quickDownload} disabled={disabled||!!quickReason} className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700 disabled:opacity-40">{working?'처리 중…':'기본 가림으로 바로 받기'}</button>
+        <div className="flex flex-wrap gap-2"><button onClick={quickDownload} disabled={disabled||!!quickReason} className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700 disabled:opacity-40">{working?'처리 중…':job.fullRedaction?'전체 가림으로 바로 받기':'기본 가림으로 바로 받기'}</button>
           <button onClick={requestExport} disabled={disabled} className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white disabled:opacity-40">내보내기 →</button>
         </div>
       </div>
-      <p className="mt-3 text-xs text-slate-500">{quickReason||'AI가 가림·유지를 판단하고, 가릴 정보는 전체 가림합니다. 직접 확정한 방법은 보존됩니다.'}</p>
+      <p className="mt-3 text-xs text-slate-500">{quickReason||(job.fullRedaction?'찾은 개인정보를 모두 전체 가림합니다. 유지·부분 가림과 AI 추천보다 우선합니다.':'AI가 가림·유지를 판단하고, 제출 상황에 따라 부분 가림을 추천할 수 있습니다. 직접 확정한 방법은 보존됩니다.')}</p>
       {!canExport && !disabled && <p className="mt-1 text-xs text-slate-500">직접 내보내기: {candidates.length-confirmed}곳 미확인{unresolved?` · ${unresolved}곳 위치 확인 필요`:''}</p>}
     {pendingQuestions.length > 0 && <section aria-label="확인할 AI 질문" className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-blue-100 pt-3">
       <div><p className="text-sm font-semibold text-blue-800">AI 확인 질문 {pendingQuestions.length}개</p><p className="mt-1 text-xs text-slate-600">문서 근거와 공유 상황만으로 판단하기 어려운 항목이에요. 미응답 항목은 전체 가림합니다.</p></div>
@@ -169,7 +169,7 @@ export default function DecisionPage() {
     <div className="mb-4 flex flex-wrap items-center gap-3 text-xs">
       <button disabled={disabled||!job.aiEnabled} onClick={rerunAI} className="rounded-lg border border-slate-200 bg-white px-3 py-2 disabled:opacity-40">{analyzing?'AI 분석 중…':'AI 검토'}</button>
       <details className="flex-1"><summary className="cursor-pointer text-slate-500">AI 분석·제안 {job.suggestions.length?`(${job.suggestions.length})`:''}</summary><div className="mt-3"><AnalysisStatus job={job}/></div></details>
-      <button disabled={disabled||!undo.length} onClick={undoLast} className="text-slate-500 disabled:opacity-30">되돌리기 ↶</button>
+      <button disabled={disabled||job.fullRedaction||!undo.length} onClick={undoLast} className="text-slate-500 disabled:opacity-30">되돌리기 ↶</button>
     </div>
 
     <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_390px]">
@@ -183,7 +183,7 @@ export default function DecisionPage() {
         </section>
         {selected && !manualOpen && <><div className="flex flex-wrap items-center gap-2 px-1 text-xs"><span className="text-slate-500">같은 정보의 위치</span>{currentGroup.map((c,i)=><button key={c.id} aria-label={`같은 정보 ${i+1}번째 위치`} aria-pressed={c.id===selected.id} onClick={()=>setSelectedId(c.id)} className={`min-w-8 rounded-lg border px-2 py-1.5 ${showReviewNeeded&&(!c.confirmed||!c.locationResolved)?'border-red-600 bg-red-50 text-red-700':c.id===selected.id?'border-blue-500 bg-blue-50 text-blue-700':'border-slate-200 bg-white'}`}>{i+1}{showReviewNeeded&&(!c.confirmed||!c.locationResolved)?' · 검토 필요':c.confirmed?' · 확인됨':''}</button>)}</div>
           {selected.locationContext&&<div className="rounded-xl bg-slate-100 px-3 py-2 text-xs text-slate-600"><p className="font-medium">{selected.locationContext.section||'선택한 정보의 위치'}</p><p className="mt-1">{selected.locationContext.label}</p>{selected.linkedValue&&<p className="mt-1">줄바꿈된 정보의 일부 · {selected.linkedValue}</p>}</div>}
-          <CandidateEditor suggestion={selectedSuggestion} key={selected.id} candidate={selected} all={candidates} busy={!!disabled} onSave={save} onClose={()=>setSelectedId(null)} onNavigate={navigate}/>
+          <CandidateEditor suggestion={selectedSuggestion} key={`${selected.id}:${job.fullRedaction}`} candidate={selected} all={candidates} busy={!!disabled || job.fullRedaction === true} onSave={save} onClose={()=>setSelectedId(null)} onNavigate={navigate}/>
 
         </>}
         {manualOpen&&<section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4"><div className="flex justify-between text-sm font-semibold"><span>{selected&&!selected.locationResolved?'원문 위치 연결':'직접 추가'}</span><button onClick={()=>setManualOpen(false)} className="text-xs text-slate-400">닫기</button></div><p className="text-xs text-slate-500">문서에서 글자를 드래그하거나 찾을 내용을 입력하세요.</p><input aria-label="원문에서 찾기" value={manualQuery} onChange={e=>{setManualQuery(e.target.value);setRange(null);}} placeholder="원문에서 찾기" className="w-full rounded-lg border border-slate-200 p-2 text-sm"/><select aria-label="추가할 정보 유형" value={manualType} onChange={e=>setManualType(e.target.value as PiiType)} className="w-full rounded-lg border p-2 text-sm">{Object.entries(PII_LABELS).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select>

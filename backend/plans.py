@@ -64,6 +64,9 @@ def apply_plan(job, payload):
 
     check_version(job, payload.get('version'))
 
+    if 'fullRedaction' in payload and type(payload['fullRedaction']) is not bool:
+        raise StoreError(422, 'invalid_plan', '전체 가림 설정은 켜기 또는 끄기여야 합니다.')
+
     candidates = payload.get('candidates')
     if candidates is None:
         candidates = []
@@ -145,6 +148,11 @@ def apply_plan(job, payload):
 
     if 'metadataReviewed' in payload:
         working['metadataReviewed'] = metadata_reviewed
+
+    if 'fullRedaction' in payload:
+        working['fullRedaction'] = payload['fullRedaction']
+    from .full_redaction import enforce
+    enforce(working)
 
     job.clear()
     job.update(working)
@@ -301,6 +309,8 @@ def apply_context(job, payload):
 def assert_ready(job):
     from .processing_requirements import assert_upstage_complete
     assert_upstage_complete(job)
+    from .full_redaction import assert_policy
+    assert_policy(job)
     if job.get('metadataReviewed') is not True:
         raise StoreError(422, 'not_ready', '메타데이터 검토가 완료되지 않았습니다.')
 

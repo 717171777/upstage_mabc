@@ -113,6 +113,31 @@ def test_table_column_headers_ground_each_independent_name(tmp_path):
     assert all(candidate['labelEvidence']['relation'] == 'table_first_row' for candidate in candidates)
 
 
+@pytest.mark.parametrize('label', ['참가자', '내담자', '상담자'])
+def test_additional_name_labels(tmp_path, label):
+    path = docx(tmp_path, paragraph(f'{label}: 김가람'))
+    assert [(c['type'], c['value']) for c in checked(path, inspect_document(path))] == [('name', '김가람')]
+
+
+def test_multiple_inline_fields_without_separators(tmp_path):
+    path = docx(tmp_path, paragraph('참가자: 김가람 상담자： 이하늘 생 년 월 일: 1990-02-03 연락처: 010-2345-6789'))
+    found = checked(path, inspect_document(path))
+    assert [(c['type'], c['value']) for c in found] == [
+        ('name', '김가람'), ('name', '이하늘'), ('dob', '1990-02-03'), ('phone', '010-2345-6789')]
+
+
+def test_contact_headers_are_not_names(tmp_path):
+    path = docx(tmp_path, table([('성명', '연락처', '이메일'),
+                                 ('김가람', '010-2345-6789', 'garam@example.test')]))
+    found = checked(path, inspect_document(path))
+    assert [c['value'] for c in found if c['type'] == 'name'] == ['김가람']
+
+
+def test_unknown_delimited_field_terminates_name(tmp_path):
+    path = docx(tmp_path, paragraph('이름: 김가람 | 부서: 연구팀'))
+    assert [c['value'] for c in checked(path, inspect_document(path))] == ['김가람']
+
+
 def test_specific_label_disambiguates_phone_shape_but_preserves_resident_id(tmp_path):
     path = docx(tmp_path, table([('계좌번호', '010-2345-6789'), ('계좌번호', '900203-1234567')]))
     candidates = checked(path, inspect_document(path))

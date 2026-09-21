@@ -42,6 +42,33 @@ def test_pdf_structure_requires_same_page():
  merge.merge_extractions(j,r);assert not j['candidates'][0].get('structureEvidence')
 
 
+@pytest.mark.parametrize('text,value', [
+ ('사번 EMP-2023-9562', 'M'),
+ ('사번 EMP-M12345678-01', 'M12345678'),
+ ('번호 XM12345678', 'M12345678'),
+ ('여권번호 M123', 'M123'),
+])
+def test_passport_fragments_remain_unresolved(text, value):
+ j=job(text)
+ r={'extracted': {'passport': [{'raw_value': value}]}}
+ merge.merge_extractions(j,r)
+ merge.merge_extractions(j,r)
+ assert len(j['candidates']) == 1
+ c=j['candidates'][0]
+ assert c['type'] == 'passport' and c['method'] == 'full'
+ assert c['locationResolved'] is False and c['unitId'] is None
+
+
+@pytest.mark.parametrize('value', ['M12345678', 'M123A4567'])
+def test_passport_only_matches_complete_identifier(value):
+ text=f'사번 EMP-{value}-01 여권번호: {value}'
+ j=job(text)
+ merge.merge_extractions(j, {'extracted': {'passport': [{'raw_value': value}]}})
+ assert len(j['candidates']) == 1
+ c=j['candidates'][0]
+ assert c['locationResolved'] is True and c['start'] == text.rindex(value)
+
+
 def email_job():
  j=job('연락 test@example.com · test@example.com')
  for start in (3,22):

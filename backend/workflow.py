@@ -253,6 +253,8 @@ def _execute(operation, args):
             attach_location_context(store.source_path(job), job['_inspection'], job['candidates'])
             from .local_policy import refresh
             refresh(job)
+            from .full_redaction import enforce
+            enforce(job)
             store.invalidate(job)
             store.save_job(job)
             return store.public_job(job)
@@ -263,6 +265,8 @@ def _execute(operation, args):
             attach_location_context(store.source_path(job), job['_inspection'], job['candidates'])
             from .local_policy import refresh
             refresh(job)
+            from .full_redaction import enforce
+            enforce(job)
             store.invalidate(job)
             store.save_job(job)
             return store.public_job(job)

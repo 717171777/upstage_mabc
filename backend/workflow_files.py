@@ -11,6 +11,8 @@ from .document_layout import build_layout
 def artifact_path(job, ack_required=False):
     from .processing_requirements import assert_upstage_complete
     assert_upstage_complete(job)
+    from .full_redaction import assert_policy
+    assert_policy(job)
     if job['status'] != 'validated':
         raise store.StoreError(409, 'invalid_status', '문서가 검증되지 않았습니다.')
 
