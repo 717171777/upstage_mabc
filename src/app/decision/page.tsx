@@ -180,7 +180,7 @@ export default function DecisionPage() {
   if(!job)return <EmptyJob/>;
   if(!job.aiEnabled || job.upstageReanalysisRequired)return <LegacyJobNotice/>;
 
-  return <ServiceShell step={2} title="가림 검토">
+  return <ServiceShell step={2} title="가림 검토" actionsDisabled={!!disabled}>
     <div className="sticky top-0 z-20 -mx-1 mb-5 rounded-2xl border border-slate-200 bg-white/95 p-4 backdrop-blur">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div><p className="font-semibold text-slate-800">개인정보 {candidates.length}곳 · 설정 적용 {customized}곳</p><p className="mt-1 text-xs text-slate-500">검토는 선택 사항이에요. 필요한 정보만 바꾸고 다음으로 이동하세요.</p></div>

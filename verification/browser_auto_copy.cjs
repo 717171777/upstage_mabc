@@ -50,7 +50,10 @@ const synthetic=()=>({
   assert(await page.getByRole('button',{name:'처리 중…',exact:true}).isDisabled());
   release();await saved();assert.equal(count('plan'),1);assert.equal(count('render'),1);
   assert(await page.getByRole('button',{name:'확인하고 다운로드',exact:true}).isDisabled());
-  await page.getByRole('checkbox',{name:'유지한 정보와 검사 범위를 확인했습니다.',exact:true}).check();
+  const controls=page.getByRole('region',{name:'다운로드 확인',exact:true});
+  assert.equal(await controls.getByRole('checkbox').count(),1);
+  assert.equal(await controls.getByRole('button',{name:'확인하고 다운로드',exact:true}).count(),1);
+  await controls.getByRole('checkbox',{name:'유지한 정보와 검사 범위를 확인했습니다.',exact:true}).check();
   assert(await page.getByRole('button',{name:'확인하고 다운로드',exact:true}).isEnabled());
   // Existing validated copy is reused; no render on refresh.
   await page.reload({waitUntil:'networkidle'});await saved();await page.waitForTimeout(650);assert.equal(count('render'),1);
@@ -76,11 +79,16 @@ const synthetic=()=>({
   await page.waitForTimeout(650);assert.equal(count('render'),beforeUnresolved);assert.equal(await page.getByText('실제 저장된 사본',{exact:true}).count(),0);
   // Restart is an explicit action: failed deletion preserves the current work.
   job=synthetic();await page.reload({waitUntil:'networkidle'});await saved();
-  const restart=page.getByRole('button',{name:'새로 시작하기',exact:true});
-  assert.equal(await restart.evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(180, 35, 24)');
-  failDelete=true;await restart.click();await page.getByRole('alert').filter({hasText:'합성 삭제 실패'}).waitFor();
+  const restart=page.getByRole('button',{name:'← 처음으로',exact:true});
+  await restart.click();
+  const restartDialog=page.getByRole('dialog',{name:'새 문서를 선택할까요?',exact:true});
+  await restartDialog.getByRole('button',{name:'계속 검토하기',exact:true}).click();
+  assert.equal(count('delete'),0,'Cancelling must keep the current document');
+  await restart.click();failDelete=true;
+  await restartDialog.getByRole('button',{name:'새 문서 선택',exact:true}).click();
+  await restartDialog.getByRole('alert').filter({hasText:'합성 삭제 실패'}).waitFor();
   assert(page.url().endsWith('/export'));assert(await page.evaluate(()=>sessionStorage.getItem('garimi-job')));
-  await restart.click();await page.waitForURL(BASE+'/');
+  await restartDialog.getByRole('button',{name:'새 문서 선택',exact:true}).click();await page.waitForURL(BASE+'/');
   assert.equal(await page.evaluate(()=>sessionStorage.getItem('garimi-job')),null);
   await page.getByRole('heading',{name:'공유할 문서, 함께 준비해요',exact:true}).waitFor();
   assert.equal(count('delete'),2);

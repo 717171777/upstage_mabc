@@ -7,7 +7,6 @@ import {useLinkedDocumentScroll} from '@/components/use-linked-document-scroll';
 import {PII_LABELS, type Job} from '@/lib/service';
 import {useState, useRef, useEffect, useCallback, useMemo} from 'react';
 import Link from 'next/link';
-import {useRouter} from 'next/navigation';
 import {isUpstageComplete} from '@/lib/workspace';
 import {exportPlanDecisions} from '@/lib/review-flow';
 
@@ -18,9 +17,7 @@ export default function ExportPage() {
 }
 
 function ExportWorkspace({job}:{job:Job}) {
-  const {busy,mutate,download,setError,erase}=useApp();
-  const router=useRouter();
-  const [restarting,setRestarting]=useState(false);
+  const {busy,mutate,download,setError}=useApp();
   const [choiceState,setChoiceState]=useState<{version:number;values:Record<string,'delete'|'keep'>}|null>(null);
   const choices=useMemo(()=>choiceState?.version===job.version?choiceState.values:Object.fromEntries(job.metadata.map(m=>[m.id,m.action])),[choiceState,job.version,job.metadata]);
   const [filename,setFilename]=useState(()=>job.fileName.replace(/\.[^.]+$/,'')+'-공유본.'+job.format);
@@ -74,25 +71,35 @@ function ExportWorkspace({job}:{job:Job}) {
       const blob=await download(filename.trim());const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename.trim();a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);setNotice('공유용 사본을 다운로드했습니다.');
     }catch(e){setError(e instanceof Error?e.message:String(e));}finally{lock.current=false;setWorking(false);}
   };
-  const startOver=async()=>{
-    if(disabled||lock.current||job.status==='rendering'||job.aiReview?.status==='running')return;
-    lock.current=true;setRestarting(true);setWorking(true);setError(null);
-    try{await erase();router.replace('/');}
-    catch(e){setError(e instanceof Error?e.message:String(e));}
-    finally{lock.current=false;setRestarting(false);setWorking(false);}
-  };
   const reviewCopy=async()=>{
     if(!job?.artifact||!validated||disabled||!job.aiEnabled||reportRunning)return;
     try{await mutate('ai-review',{sha256:job.artifact.sha256});setNotice('저장 사본에 남아 있는 정보를 AI가 검토합니다.');}catch(e){setError(e instanceof Error?e.message:String(e));}
   };
   if(!job)return <EmptyJob/>;
 
-  return <ServiceShell step={3} title="비교하고 내보내기">
+  return <ServiceShell step={3} title="비교하고 내보내기" actionsDisabled={disabled}>
     {!isUpstageComplete(job)&&<p role="status" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">{job.processingBlocked||'Upstage 분석이 완료되지 않았습니다. 가림 검토로 돌아가 AI 검토를 다시 실행해 주세요.'}</p>}
-    <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-      <Link href="/decision" className="text-sm text-slate-500">← 가림 검토</Link>
-      <button onClick={getFile} disabled={disabled||!validated||!!nameError||(!job.acknowledged&&!checked)} className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white disabled:opacity-40">{working?'처리 중…':job.acknowledged?'파일 다운로드':'확인하고 다운로드'}</button>
-    </div>
+    <section aria-label="다운로드 확인" className="sticky top-0 z-20 mb-5 rounded-xl border border-blue-100 bg-white p-4 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <Link href="/decision" className="min-h-10 content-center text-sm text-slate-600">← 가림 검토</Link>
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+          <label className={`flex min-h-11 items-center gap-3 rounded-lg border px-3 py-2 text-sm ${validated?'cursor-pointer border-blue-200 bg-blue-50 text-slate-800':'border-slate-200 bg-slate-50 text-slate-500'}`}>
+            <input type="checkbox" checked={validated&&(job.acknowledged||checked)} disabled={!validated||disabled||job.acknowledged}
+              onChange={event=>setCheckedArtifact(event.target.checked?artifactKey:'')} aria-describedby="download-review-summary" className="h-5 w-5 shrink-0 accent-blue-600"/>
+            <span>유지한 정보와 검사 범위를 확인했습니다.</span>
+          </label>
+          <button onClick={getFile} disabled={disabled||!validated||!!nameError||(!job.acknowledged&&!checked)} aria-describedby="download-review-summary"
+            className="min-h-11 w-full rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white disabled:opacity-40 sm:w-auto">{working?'처리 중…':job.acknowledged?'파일 다운로드':'확인하고 다운로드'}</button>
+        </div>
+      </div>
+      <div id="download-review-summary" className="mt-3 border-t border-slate-100 pt-3 text-xs leading-relaxed text-slate-600" aria-live="polite">
+        {validated?<>
+          <p>유지한 정보 {retained}곳 · 유지한 문서 속성 {keptMetadata}개</p>
+          {job.uninspected.length>0&&<p className="mt-1 text-amber-700">검사하지 못한 영역: {job.uninspected.join(', ')}</p>}
+          <p className="mt-1">{nameError||((job.acknowledged||checked)?'확인한 공유본을 다운로드할 수 있어요.':'아래 원본과 공유본을 비교한 뒤, 위 항목에 체크하면 다운로드할 수 있어요.')}</p>
+        </>:<p>{copyError?'사본 생성에 실패했어요. 아래 안내에서 다시 시도해 주세요.':allReady?'공유본을 준비하고 있어요. 준비가 끝나면 확인할 수 있어요.':'문서 분석과 원문 위치 연결을 완료해 주세요.'}</p>}
+      </div>
+    </section>
     {job.acknowledgmentMode==='ai_automatic'&&validated&&<div className="mb-4 rounded-xl bg-blue-50 px-4 py-3 text-sm text-blue-800">가림·유지 판단과 기본 전체 가림을 적용하고 저장 사본 검사를 통과했습니다. 유지한 정보도 아래에서 비교할 수 있습니다.</div>}
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
       <div><h2 className="text-sm font-semibold text-slate-800">원본과 저장 사본 비교</h2><p className="mt-1 text-xs text-slate-500">{scrollLinked?'어느 쪽을 스크롤해도 같은 위치를 함께 보여줍니다.':'각 문서를 따로 움직일 수 있습니다.'}</p></div>
@@ -116,12 +123,9 @@ function ExportWorkspace({job}:{job:Job}) {
         {report&&report.status!=='running'&&<div aria-live="polite" className="mt-4 border-t border-slate-100 pt-3"><p className={`text-sm font-medium ${report.status==='completed'?'text-slate-700':'text-amber-700'}`}>{report.status==='completed'?'AI 검토를 마쳤습니다':report.status==='partial'?'일부 검토가 끝나지 않았습니다':'AI 검토를 완료하지 못했습니다'}</p>{report.findings.length?<><p className="mt-1 text-xs text-slate-500">남아 있는 정보 {report.findings.length}개 · 의도한 유지인지 확인하세요.</p><div className="mt-3 max-h-60 space-y-3 overflow-auto">{report.findings.map((f,i)=><div key={`${f.id}-${i}`} className="rounded-lg bg-slate-50 p-3 text-sm"><p><span className="mr-2 text-xs text-slate-500">{PII_LABELS[f.type]}</span>{f.value}</p><p className="mt-1 text-xs text-slate-500">{f.reason}</p>{f.plannedKeep&&<p className="mt-1 text-xs text-blue-600">유지한 값과 일치 · 위치별 확인 필요</p>}</div>)}</div><Link href="/decision" className="mt-3 inline-block text-xs text-blue-600">가림 검토에서 수정 →</Link></>:report.status==='completed'?<p className="mt-2 text-xs text-slate-500">추가 후보를 찾지 못했습니다. 누락이 없음을 보장하지 않습니다.</p>:null}{report.warnings.map((w,i)=><p key={i} className="mt-2 text-xs text-amber-700">{w}</p>)}</div>}
       </section>}
       <details className="rounded-xl border border-slate-200 bg-white px-4 py-3"><summary className="cursor-pointer text-sm font-medium">파일 이름·검사 결과</summary><label className="mt-3 block text-xs text-slate-500">파일 이름<input aria-label="파일 이름" value={filename} disabled={disabled} onChange={e=>setFilename(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-200 p-2 text-sm text-slate-800"/></label>{nameError&&<p className="mt-1 text-xs text-red-600">{nameError}</p>}{validated&&job.artifact?<div className="mt-4 text-xs text-slate-500"><p className="font-medium text-slate-700">저장 사본 재검사 통과</p>{job.artifact.checks.map((c,i)=><p key={i} className="mt-1">{c.detail||c.name} · {c.passed?'통과':'확인 필요'}</p>)}<p className="mt-2 break-all font-mono text-[10px]">SHA-256 {job.artifact.sha256}</p></div>:<p className="mt-3 text-xs text-slate-500">아직 현재 설정의 저장 사본을 검사하지 않았습니다.</p>}</details>
-      {validated&&<div className="rounded-xl bg-slate-100 p-4 text-sm"><p className="text-slate-600">유지한 정보 {retained}곳 · 유지한 문서 속성 {keptMetadata}개</p>{job.uninspected.length>0&&<p className="mt-2 text-amber-700">검사하지 못한 영역: {job.uninspected.join(', ')}</p>}{!job.acknowledged&&<label className="mt-3 flex items-start gap-2"><input type="checkbox" checked={checked} onChange={e=>setCheckedArtifact(e.target.checked?artifactKey:'')} className="mt-1"/><span>유지한 정보와 검사 범위를 확인했습니다.</span></label>}{job.acknowledged&&<p className="mt-2 text-xs text-slate-500">{job.acknowledgmentMode?.endsWith('_automatic')?'자동 적용으로 다운로드가 허용된 사본입니다.':'확인한 사본을 다운로드할 수 있습니다.'}</p>}</div>}
+
     </div>
     <p aria-live="polite" className="mt-4 text-sm text-blue-700">{notice}</p>
-    <section aria-label="새 문서로 시작" className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-slate-200 pt-6">
-      <p className="max-w-xl text-xs leading-relaxed text-slate-500">새로 시작하면 현재 작업 공간과 저장 사본이 삭제됩니다. 컴퓨터의 원본과 이미 다운로드한 파일은 그대로 유지됩니다.</p>
-      <button type="button" onClick={startOver} disabled={disabled||job.status==='rendering'||job.aiReview?.status==='running'} className="min-h-11 bg-red-600 px-6 py-3 text-sm font-semibold text-white hover:bg-red-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:opacity-40">{restarting?'정리 중…':'새로 시작하기'}</button>
-    </section>
+
   </ServiceShell>;
 }

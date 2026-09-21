@@ -7,6 +7,7 @@ import { Shield, FileText } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { RecommendationProgress } from './recommendation-progress';
 import type { Job } from '@/lib/service';
+import {RestartDocumentButton} from './restart-document-button';
 
 const STATUS_LABELS: Record<string, string> = {
   pending: '대기',
@@ -31,11 +32,13 @@ export function ServiceShell({
   title,
   children,
   showSteps = true,
+  actionsDisabled = false,
 }: {
   step: 1 | 2 | 3;
   title: string;
   children: React.ReactNode;
   showSteps?: boolean;
+  actionsDisabled?: boolean;
 }) {
   const { job, busy, error, setError, erase } = useApp();
   const router=useRouter();
@@ -111,7 +114,10 @@ export function ServiceShell({
       </div>}
 
       <main className="mx-auto max-w-[1440px] px-4 sm:px-6 py-5">
-        <h1 className={`mb-3 font-semibold text-slate-800 ${showSteps ? 'text-xl' : 'text-2xl tracking-tight sm:text-3xl'}`}>{title}</h1>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <h1 className={`font-semibold text-slate-800 ${showSteps ? 'text-xl' : 'text-2xl tracking-tight sm:text-3xl'}`}>{title}</h1>
+          {job&&step>=2&&<RestartDocumentButton disabled={actionsDisabled}/>}
+        </div>
 
         {job && <details className="mb-4 text-xs text-slate-500"><summary className="cursor-pointer"><span className="font-medium text-slate-600">{job.fileName}</span><span className="ml-3">작업 정보</span></summary><div className="mt-3 flex flex-wrap items-center gap-4 rounded-xl bg-white p-3"><span>작업 공간 삭제 예정: {new Date(job.expiresAt).toLocaleString('ko-KR')}</span><Link href="/context" className="text-blue-600">공유 상황 수정</Link><button disabled={busy || deleting} onClick={()=>setShowDelete(true)} className="text-red-600">작업 즉시 삭제</button></div></details>}
 
