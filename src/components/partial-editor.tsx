@@ -3,7 +3,7 @@
 import {useState,useRef,useEffect,useCallback} from 'react';
 import type {Candidate} from '@/lib/service';
 import type {Mask} from '@/lib/masking';
-import {graphemes,maskFromIndices,presetsFor,validPartial,maskedText} from '@/lib/masking';
+import {graphemes,maskFromIndices,presetsFor,validPartial} from '@/lib/masking';
 
 export type {Mask};
 
@@ -12,10 +12,11 @@ type Props = {
   disabled?: boolean;
   onApply: (mask: Mask, presetId: string | null) => void;
   onCancel: () => void;
+  onPreview?: (mask: Mask, presetId: string | null) => void;
 };
 
-export function PartialEditor({candidate, disabled, onApply, onCancel}: Props) {
-  const [mode, setMode] = useState<'hide' | 'keep'>('hide');
+export function PartialEditor({candidate, disabled, onApply, onCancel, onPreview}: Props) {
+  const dragHidesRef = useRef(true);
   const [selected, setSelected] = useState<Set<number>>(() => {
     const chars = graphemes(candidate.value);
     const set = new Set<number>();
@@ -26,7 +27,8 @@ export function PartialEditor({candidate, disabled, onApply, onCancel}: Props) {
     }
     return set;
   });
-  const [presetId, setPresetId] = useState<string | null>(null);
+  const [presetId, setPresetId] = useState<string | null>(() => presetsFor(candidate.type, candidate.value)
+    .find(p => JSON.stringify(p.mask) === JSON.stringify(candidate.mask))?.id ?? null);
   const [dragStart, setDragStart] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const chipRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -34,29 +36,20 @@ export function PartialEditor({candidate, disabled, onApply, onCancel}: Props) {
   const dragSnapshotRef = useRef<Set<number> | null>(null);
 
   const chars = graphemes(candidate.value);
-  const presets = presetsFor(candidate.type, candidate.value);
   const selectedArray = [...selected];
   const mask = maskFromIndices(candidate.value, selectedArray);
   const valid = validPartial(candidate.value, mask);
-  const result = maskedText(candidate.value, 'partial', mask);
   const fullSelection = selected.size === chars.length;
   const emptySelection = selected.size === 0;
+  const previewKey = JSON.stringify(mask);
+  useEffect(() => {
+    onPreview?.(JSON.parse(previewKey) as Mask, presetId);
+  }, [previewKey, presetId, onPreview]);
 
   const clearSelection = useCallback(() => {
     setSelected(new Set());
     setPresetId(null);
   }, []);
-
-  const applyPreset = useCallback((p: typeof presets[0]) => {
-    const newSelected = new Set<number>();
-    for (let i = 0; i < chars.length; i++) {
-      if (p.mask.some(([a, b]) => a <= chars[i].start && chars[i].end <= b)) {
-        newSelected.add(i);
-      }
-    }
-    setSelected(newSelected);
-    setPresetId(p.id);
-  }, [chars]);
 
   const toggleChip = useCallback((i: number) => {
     setSelected(prev => {
@@ -75,7 +68,8 @@ export function PartialEditor({candidate, disabled, onApply, onCancel}: Props) {
     setDragStart(i);
     setIsDragging(true);
     dragSnapshotRef.current = new Set(selected);
-    if (mode === 'hide') {
+    dragHidesRef.current = !selected.has(i);
+    if (dragHidesRef.current) {
       setSelected(prev => {
         const next = new Set(prev);
         if (!next.has(i)) next.add(i);
@@ -89,7 +83,7 @@ export function PartialEditor({candidate, disabled, onApply, onCancel}: Props) {
       });
     }
     setPresetId(null);
-  }, [mode, selected, disabled]);
+  }, [selected, disabled]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (!isDragging || dragStart === null) return;
@@ -105,10 +99,10 @@ export function PartialEditor({candidate, disabled, onApply, onCancel}: Props) {
           const start = Math.min(dragStart, index);
           const end = Math.max(dragStart, index);
           const base = dragSnapshotRef.current || new Set();
-          setSelected(prev => {
+          setSelected(() => {
             const next = new Set(base);
             for (let j = start; j <= end; j++) {
-              if (mode === 'hide') next.add(j);
+              if (dragHidesRef.current) next.add(j);
               else next.delete(j);
             }
             return next;
@@ -116,7 +110,7 @@ export function PartialEditor({candidate, disabled, onApply, onCancel}: Props) {
         }
       }
     }
-  }, [isDragging, dragStart, mode, disabled]);
+  }, [isDragging, dragStart, disabled]);
 
   useEffect(() => {
     const handleGlobal = () => {
@@ -157,55 +151,11 @@ export function PartialEditor({candidate, disabled, onApply, onCancel}: Props) {
     return () => window.removeEventListener('keydown', handleEsc);
   }, [onCancel]);
 
-  const noPreset = presets.length === 0;
-
   return (
-    <div className="space-y-4" onPointerMove={handlePointerMove}>
-      <div className="text-sm text-slate-600 whitespace-pre-wrap break-all">{candidate.value}</div>
-
-      <div className="flex gap-2 mb-4">
-        <button
-          type="button"
-          onClick={() => setMode('hide')}
-          className={`max-w-full break-all px-3 py-1.5 rounded-md text-sm border ${mode === 'hide' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-700 border-slate-300'}`}
-          aria-pressed={mode === 'hide'}
-        >
-          가릴 글자 선택
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode('keep')}
-          className={`max-w-full break-all px-3 py-1.5 rounded-md text-sm border ${mode === 'keep' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-700 border-slate-300'}`}
-          aria-pressed={mode === 'keep'}
-        >
-          남길 글자 선택
-        </button>
-      </div>
-
-      <div className="mb-4">
-        <h3 className="text-sm font-medium text-slate-700 mb-2">추천 방식</h3>
-        {noPreset ? (
-          <p className="text-sm text-slate-500">이 값에 맞는 프리셋이 없어 직접 선택해 주세요.</p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {presets.map(p => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => applyPreset(p)}
-                disabled={disabled}
-                className="max-w-full break-all px-3 py-1.5 rounded-md text-sm border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-              >
-                <div className="font-medium">{p.label}</div>
-                <div className="text-xs text-slate-500 whitespace-pre-wrap break-all">{p.result}</div>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
+    <div className="space-y-3" onPointerMove={handlePointerMove}>
+      <p className="text-xs leading-relaxed text-slate-600">가릴 글자를 눌러 주세요. 다시 누르면 가림이 풀려요. 이어서 드래그할 수도 있어요.</p>
       <div>
-        <h3 className="text-sm font-medium text-slate-700 mb-2">직접 수정</h3>
+
         <div
           ref={containerRef}
           className="flex flex-wrap gap-1 max-h-32 overflow-y-auto p-2 border border-slate-200 rounded-md bg-white"
@@ -237,11 +187,6 @@ export function PartialEditor({candidate, disabled, onApply, onCancel}: Props) {
         </div>
       </div>
 
-      <div className="mt-4 p-3 border border-slate-200 rounded-md bg-slate-50">
-        <div className="text-xs text-slate-500 mb-1">이렇게 보입니다</div>
-        <div className="text-sm whitespace-pre-wrap break-all">{result}</div>
-      </div>
-
       <div className="flex gap-2 mt-4">
         <button
           type="button"
@@ -249,7 +194,7 @@ export function PartialEditor({candidate, disabled, onApply, onCancel}: Props) {
           disabled={disabled}
           className="max-w-full break-all px-3 py-1.5 rounded-md text-sm border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50"
         >
-          선택 초기화
+          다시 선택
         </button>
         <button
           type="button"
@@ -257,7 +202,7 @@ export function PartialEditor({candidate, disabled, onApply, onCancel}: Props) {
           disabled={disabled || !valid || emptySelection || fullSelection}
           className="max-w-full break-all px-3 py-1.5 rounded-md text-sm border border-blue-600 bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          이 결과로 적용
+          글자 선택 완료
         </button>
         <button
           type="button"
@@ -268,7 +213,7 @@ export function PartialEditor({candidate, disabled, onApply, onCancel}: Props) {
         </button>
       </div>
 
-      <div className="min-h-10" aria-live="polite">
+      <div aria-live="polite">
         <p className="text-xs text-amber-600">
           {fullSelection
             ? "모두 가리려면 '전체 가림'을 선택해 주세요."

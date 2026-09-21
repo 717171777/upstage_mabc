@@ -37,7 +37,7 @@ function ExportWorkspace({job}:{job:Job}) {
   const inputKey=JSON.stringify([job.version,choices]);
   const dirty=!!job&&job.metadata.some(m=>choices[m.id]!==m.action);
   const validated=!!job&&isUpstageComplete(job)&&job.status==='validated'&&!!job.artifact&&job.artifact.version===job.version&&job.artifact.validationVersion===job.version&&job.artifact.checks.every(c=>c.passed)&&!dirty;
-  const allReady=!!job&&isUpstageComplete(job)&&job.candidates.every(c=>c.confirmed&&c.locationResolved)&&!job.analysis.incomplete&&!['analyzing','rendering'].includes(job.status);
+  const allReady=!!job&&isUpstageComplete(job)&&job.candidates.every(c=>c.locationResolved)&&!job.analysis.incomplete&&!['analyzing','rendering'].includes(job.status);
   const disabled=busy||working;
   const retained=job?.candidates.filter(c=>c.method==='keep').length??0;
   const keptMetadata=Object.values(choices).filter(v=>v==='keep').length;
@@ -49,6 +49,10 @@ function ExportWorkspace({job}:{job:Job}) {
   const createCopy=useCallback(async()=>{
     if(!job||disabled||lock.current||!allReady)return;lock.current=true;attempted.current=inputKey;setWorking(true);setCopyError('');setError(null);setNotice('');
     try{
+      if(job.candidates.some(c=>!c.confirmed)){
+        const prepared=await mutate('prepare-export',{});
+        attempted.current=JSON.stringify([prepared.version,choices]);
+      }
       if(dirty||!job.metadataReviewed){
         const planned=await mutate('plan',{metadataActions:choices,metadataReviewed:true});
         attempted.current=JSON.stringify([planned.version,choices]);
@@ -102,10 +106,10 @@ function ExportWorkspace({job}:{job:Job}) {
     <div className="grid items-start gap-5 md:grid-cols-2" data-testid="document-comparison">
       <section className="min-w-0"><h2 className="mb-2 text-sm font-semibold text-slate-700">가리기 전 <span className="font-normal text-slate-400">· 원본</span></h2><DocumentView job={job} variant="original" readOnlyOriginal compact pageNumber={pageNumber} onPageChange={setPageNumber} viewportRef={originalRef} zoomPercent={comparisonZoom}/></section>
       <section className="min-w-0"><h2 className="mb-2 text-sm font-semibold text-slate-700">가린 후 <span className="font-normal text-slate-400">· 저장 사본</span></h2>{validated?<DocumentView job={job} variant="copy" compact pageNumber={pageNumber} onPageChange={setPageNumber} viewportRef={copyRef} zoomPercent={comparisonZoom}/>:<div role="status" aria-live="polite" className="flex min-h-[420px] flex-col items-center justify-center border border-dashed border-slate-300 bg-white p-8 text-center">
-        <h3 className="text-base font-semibold">{copyError?'저장 사본을 준비하지 못했어요':working||job.status==='rendering'?'사본을 만들고 검사하고 있어요':allReady?'저장 사본을 자동으로 준비합니다':'먼저 가림 검토를 마쳐 주세요'}</h3>
+        <h3 className="text-base font-semibold">{copyError?'저장 사본을 준비하지 못했어요':working||job.status==='rendering'?'사본을 만들고 검사하고 있어요':allReady?'저장 사본을 자동으로 준비합니다':'문서 분석과 원문 위치를 확인해 주세요'}</h3>
         <p className="my-3 max-w-sm text-sm leading-relaxed text-slate-500">{copyError||'선택한 가림과 문서 속성 설정을 적용하고, 실제 저장 파일을 다시 열어 검사한 뒤 여기에 보여드립니다.'}</p>
         {copyError&&<button onClick={createCopy} disabled={!allReady||disabled} className="mt-2 bg-blue-600 px-5 py-3 text-sm font-medium text-white disabled:opacity-40">사본 생성 다시 시도</button>}
-        {!allReady&&!working&&job.status!=='rendering'&&<Link href="/decision" className="mt-4 text-xs text-blue-600">{isUpstageComplete(job)?'미확인 항목 검토하기 →':'Upstage 분석을 완료해 주세요 →'}</Link>}
+        {!allReady&&!working&&job.status!=='rendering'&&<Link href="/decision" className="mt-4 text-xs text-blue-600">{isUpstageComplete(job)?'원문 위치 연결하기 →':'문서 분석을 완료해 주세요 →'}</Link>}
       </div>}</section>
     </div>
     <div className="mt-5 space-y-3">

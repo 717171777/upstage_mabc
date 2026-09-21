@@ -6,6 +6,7 @@ import {useState, useEffect, useRef, useMemo, type Ref} from 'react';
 import type {Job, Unit, Candidate, PreviewResult, DocumentBlock} from '@/lib/service';
 import {useApp} from '@/contexts/AppContext';
 import {selectedTextRange} from '@/lib/masking';
+import {hidesRange, previewSegments, type ReviewViewMode} from '@/lib/review-preview';
 
 type SelectionRange = {unitId: string; start: number; end: number; value: string};
 type Props = {
@@ -14,19 +15,19 @@ type Props = {
   pageNumber?: number; onPageChange?: (page: number) => void;
   compact?: boolean; readOnlyOriginal?: boolean;
   viewportRef?: Ref<HTMLDivElement>; zoomPercent?: number;
+  previewCandidates?: Candidate[];
+  viewMode?: ReviewViewMode; onViewModeChange?: (mode: ReviewViewMode) => void;
+  previewPending?: boolean;
 };
 const partLabel = (part = '') => part.includes('header') ? '머리말' : part.includes('footer') ? '꼬리말' : '본문';
 const isLocated = (c: Candidate) => c.locationResolved && c.start !== null && c.end !== null && !!c.unitId;
-function hides(c: Candidate, start: number, end: number) {
-  if (c.start === null || c.end === null || start < c.start || end > c.end) return false;
-  return c.method === 'full' || c.method === 'delete' || (c.method === 'partial' && c.mask.some(([a,b]) => start >= c.start! + a && end <= c.start! + b));
-}
-
-export function DocumentView({job, variant = 'original', active, onSelect, onCandidateSelect, pageNumber: controlledPage, onPageChange, compact = false, readOnlyOriginal = false, viewportRef, zoomPercent}: Props) {
+export function DocumentView({job, variant = 'original', active, onSelect, onCandidateSelect, pageNumber: controlledPage, onPageChange, compact = false, readOnlyOriginal = false, viewportRef, zoomPercent, previewCandidates, viewMode, onViewModeChange, previewPending = false}: Props) {
   const {preview, page} = useApp();
   const [loaded, setLoaded] = useState<{key:string;data?:PreviewResult;error?:string}|null>(null);
   const [structure, setStructure] = useState(false);
-  const [mode, setMode] = useState<'edit' | 'masked'>('edit');
+  const [localMode, setLocalMode] = useState<ReviewViewMode>('detected');
+  const mode = viewMode ?? localMode;
+  const setMode = (next: ReviewViewMode) => {setLocalMode(next); onViewModeChange?.(next);};
   const [pageChoice, setPageChoice] = useState<{key:string;number:number}|null>(null);
   const [localZoom, setZoom] = useState(100);
   const zoom = zoomPercent ?? localZoom;
@@ -71,12 +72,12 @@ export function DocumentView({job, variant = 'original', active, onSelect, onCan
   const units = useMemo(() => new Map((data?.units ?? []).map(u => [u.id, u])), [data]);
   const candidatesByUnit = useMemo(() => {
     const map = new Map<string, Candidate[]>();
-    if (editable) for (const c of job.candidates) if (isLocated(c)) map.set(c.unitId!, [...(map.get(c.unitId!) ?? []), c]);
+    if (editable) for (const c of previewCandidates ?? job.candidates) if (isLocated(c)) map.set(c.unitId!, [...(map.get(c.unitId!) ?? []), c]);
     return map;
-  }, [job.candidates, editable]);
+  }, [job.candidates, previewCandidates, editable]);
 
   const selectText = (el: HTMLDivElement, unit: Unit) => {
-    if (!editable || !onSelect) return;
+    if (!editable || !onSelect || mode !== 'detected') return;
     const selected = selectedTextRange(el, window.getSelection());
     if (!selected) return;
     const chars = Array.from(unit.text);
@@ -87,24 +88,16 @@ export function DocumentView({job, variant = 'original', active, onSelect, onCan
   const renderText = (unit: Unit) => {
     const cs = candidatesByUnit.get(unit.id) ?? [];
     if (!cs.length) return unit.text;
-    const chars = Array.from(unit.text);
-    const bounds = new Set([0, chars.length]);
-    for (const c of cs) {
-      bounds.add(c.start!); bounds.add(c.end!);
-      if (c.method === 'partial') for (const [a,b] of c.mask) {bounds.add(c.start!+a); bounds.add(c.start!+b);}
-    }
-    const sorted = [...bounds].filter(n => n >= 0 && n <= chars.length).sort((a,b) => a-b);
-    return sorted.slice(0,-1).map((start,i) => {
-      const end = sorted[i+1];
-      const covering = cs.filter(c => c.start! <= start && c.end! >= end);
-      const chosen = covering.find(c => c.id === active?.id) ?? covering[0];
-      const hidden = covering.some(c => hides(c,start,end));
-      return <span key={start} data-candidate-id={chosen?.id} data-masked={hidden || undefined}
+    return previewSegments(unit, cs).map(segment => {
+      const chosen = segment.candidates.find(c => c.id === active?.id) ?? segment.candidates[0];
+      const hidden = mode === 'masked' && segment.masked;
+      const deleted = hidden && segment.deleted;
+      const text = hidden ? deleted ? '' : '*'.repeat(segment.end - segment.start) : segment.text;
+      return <span key={segment.start} data-candidate-id={chosen?.id} data-masked={hidden || undefined} data-detected={!!chosen || undefined}
         onClick={e => {if (chosen && !window.getSelection()?.toString()) {e.stopPropagation(); onCandidateSelect?.(chosen.id);}}}
-        style={{backgroundColor: hidden ? mode === 'edit' ? 'var(--ui-mask-edit)' : 'var(--ui-mask-solid)' : undefined,
-          color: hidden && mode === 'masked' ? 'transparent' : undefined,
+        style={{backgroundColor: mode === 'detected' && chosen ? 'var(--ui-detection-highlight)' : undefined,
           boxShadow: chosen?.id === active?.id ? 'inset 0 -2px var(--ui-primary)' : undefined,
-          cursor: chosen ? 'pointer' : undefined, borderRadius: 2}}>{chars.slice(start,end).join('')}</span>;
+          cursor: chosen ? 'pointer' : undefined, borderRadius: 2}}>{text}</span>;
     });
   };
   const renderUnit = (unit: Unit, block?: Extract<DocumentBlock,{kind:'paragraph'}>) => <div key={unit.id} data-scroll-anchor={unit.id}
@@ -122,23 +115,22 @@ export function DocumentView({job, variant = 'original', active, onSelect, onCan
   const size = data?.pageSizes?.[String(number)];
   const pdfOverlays = editable && size ? (data?.units ?? []).filter(u => u.page === number).flatMap(u => (candidatesByUnit.get(u.id) ?? []).flatMap(c =>
     (u.chars ?? []).slice(c.start!,c.end!).map((ch,i) => {
-      const hidden = hides(c,c.start!+i,c.start!+i+1);
-      if (!hidden && c.id !== active?.id) return null;
+      const hidden = mode === 'masked' && hidesRange(c,c.start!+i,c.start!+i+1);
       const [x0,y0,x1,y1] = ch.bbox;
-      return <button key={`${c.id}-${i}`} type="button" tabIndex={-1} aria-label="이 정보 선택" onClick={() => onCandidateSelect?.(c.id)}
+      return <button key={`${c.id}-${i}`} type="button" tabIndex={-1} aria-label="이 정보 선택" data-candidate-id={c.id} data-detected data-masked={hidden || undefined} onClick={() => onCandidateSelect?.(c.id)}
         className="absolute p-0 border-0" style={{left:`${x0/size.width*100}%`,top:`${y0/size.height*100}%`,width:`${(x1-x0)/size.width*100}%`,height:`${(y1-y0)/size.height*100}%`,
-          backgroundColor: hidden ? mode === 'edit' ? 'var(--ui-mask-edit-pdf)' : 'var(--ui-mask-solid)' : 'transparent', boxShadow:c.id === active?.id ? 'inset 0 -2px var(--ui-primary)' : undefined}}/>;
+          backgroundColor: mode === 'detected' ? 'var(--ui-detection-highlight)' : hidden ? c.method === 'delete' ? 'var(--ui-pdf-delete)' : 'var(--ui-mask-solid)' : 'transparent', boxShadow:c.id === active?.id ? 'inset 0 -2px var(--ui-primary)' : undefined}}/>;
     }))) : null;
 
   return <div className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-800">
     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-3">
       {editable ? <div className="flex rounded-lg bg-slate-100 p-0.5 text-xs">
-        {(['edit','masked'] as const).map(m => <button key={m} aria-pressed={mode === m} onClick={() => setMode(m)} className={`rounded-md px-3 py-2 ${mode === m ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}>{m === 'edit' ? '원문 보며 편집' : '가림 미리보기'}</button>)}
+        {(['detected','masked'] as const).map(m => <button key={m} aria-pressed={mode === m} onClick={() => setMode(m)} className={`rounded-md px-3 py-2 ${mode === m ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}>{m === 'detected' ? '탐지된 개인정보' : '가림 결과 미리보기'}</button>)}
       </div> : <span className="text-sm font-medium">{isCopy ? '실제 저장된 사본' : '원본 문서'}</span>}
       {!compact && <button type="button" aria-pressed={structure} onClick={() => setStructure(v => !v)} className={`rounded-lg border px-3 py-2 text-xs ${structure ? 'bg-blue-50 border-blue-200 text-blue-700' : 'border-slate-200 text-slate-500'}`}>구조 보기 {structure ? '켜짐' : '꺼짐'}</button>}
       {data?.format === 'pdf' && <div className="flex items-center gap-2 text-xs"><button aria-label="이전 페이지" disabled={number <= 1} onClick={() => setPage(number-1)} className="p-2 disabled:opacity-30">←</button><span>{number} / {totalPages}</span><button aria-label="다음 페이지" disabled={number >= totalPages} onClick={() => setPage(number+1)} className="p-2 disabled:opacity-30">→</button></div>}
     </div>
-    {editable && <p className="border-b border-slate-100 px-4 py-2 text-xs text-slate-500">{mode === 'edit' ? '반투명 부분이 가려질 범위입니다. 원문을 보며 수정하세요.' : '저장 전 예상 결과입니다. 실제 저장 사본은 내보내기에서 확인합니다.'}</p>}
+    {editable && <p role="status" className="border-b border-slate-100 px-4 py-2 text-xs text-slate-500">{mode === 'detected' ? '노란색은 탐지된 개인정보입니다. 가리지 않은 원문을 확인하고, 정보를 눌러 방법을 고르세요.' : previewPending ? '선택 중인 옵션과 적용 범위를 미리 보여줍니다. 변경 적용 또는 다른 항목·다음 단계로 이동할 때 저장됩니다.' : '현재 가림 설정의 예상 결과입니다. 실제 저장 사본은 내보내기에서 확인합니다.'}</p>}
     <div ref={viewportRef} data-testid={`document-viewport-${variant}`} role="region" aria-label={`${isCopy ? '저장 사본' : '원본'} 문서 스크롤 영역`} tabIndex={0}
       className="max-h-[72vh] min-h-64 overflow-auto overscroll-contain bg-[var(--ui-document-canvas)] p-3 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 sm:p-5" style={{scrollbarGutter: 'stable'}}>
       {error ? <p role="alert" className="p-5 text-sm text-red-600">{error}</p> : !data ? <p className="p-5 text-sm text-slate-500">문서를 불러오는 중…</p> : structure ? <div className="bg-white rounded-lg">{data.units.filter(u => data.format !== 'pdf' || u.page === number).map(u => renderUnit(u))}</div>

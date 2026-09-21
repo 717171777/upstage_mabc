@@ -25,6 +25,9 @@ const synthetic=()=>({
    calls.push('delete');
    if(failDelete){failDelete=false;return r.fulfill({status:500,contentType:'application/json',body:JSON.stringify({error:'합성 삭제 실패'})});}
    return r.fulfill({status:200,contentType:'application/json',body:JSON.stringify({deleted:true})});
+  }else if(path.endsWith('/prepare-export')){
+   calls.push('prepare-export');assert.equal(r.request().postDataJSON().version,job.version);
+   job={...job,version:job.version+1,candidates:job.candidates.map(c=>c.confirmed?c:{...c,confirmed:true,decisionSource:'ai_automatic'}),artifact:null,acknowledged:false,status:'review'};body=job;
   }else if(path.endsWith('/plan')){
    calls.push('plan');const p=r.request().postDataJSON();assert.equal(p.version,job.version);
    job={...job,version:job.version+1,metadataReviewed:p.metadataReviewed,metadata:job.metadata.map(m=>({...m,action:p.metadataActions[m.id]})),artifact:null,acknowledged:false,status:'review'};body=job;
@@ -64,12 +67,15 @@ const synthetic=()=>({
   await page.getByText('저장 사본을 준비하지 못했어요',{exact:true}).waitFor();
   const afterFailure=count('render');await page.waitForTimeout(1200);assert.equal(count('render'),afterFailure);
   await page.getByRole('button',{name:'사본 생성 다시 시도',exact:true}).click();await saved();assert.equal(count('render'),afterFailure+1);
-  // An unconfirmed or unresolved item never renders.
-  for(const field of ['confirmed','locationResolved']){
-   job=synthetic();job.candidates[0][field]=false;const n=count('render');
-   await page.reload({waitUntil:'networkidle'});await page.getByText('먼저 가림 검토를 마쳐 주세요',{exact:true}).waitFor();
-   await page.waitForTimeout(650);assert.equal(count('render'),n);assert.equal(await page.getByText('실제 저장된 사본',{exact:true}).count(),0);
-  }
+  // Individual review is optional; displayed defaults are prepared before rendering.
+  job=synthetic();job.candidates[0].confirmed=false;const beforeOptional=count('render');
+  await page.reload({waitUntil:'networkidle'});await saved();
+  assert.equal(count('render'),beforeOptional+1);assert.equal(count('prepare-export'),1);
+  assert.equal(job.candidates[0].method,'full');assert.equal(job.candidates[0].decisionSource,'ai_automatic');
+  // Unknown source locations still prevent creation of a misleading copy.
+  job=synthetic();job.candidates[0].locationResolved=false;const beforeUnresolved=count('render');
+  await page.reload({waitUntil:'networkidle'});await page.getByText('문서 분석과 원문 위치를 확인해 주세요',{exact:true}).waitFor();
+  await page.waitForTimeout(650);assert.equal(count('render'),beforeUnresolved);assert.equal(await page.getByText('실제 저장된 사본',{exact:true}).count(),0);
   // Restart is an explicit action: failed deletion preserves the current work.
   job=synthetic();await page.reload({waitUntil:'networkidle'});await saved();
   const restart=page.getByRole('button',{name:'새로 시작하기',exact:true});
@@ -81,6 +87,6 @@ const synthetic=()=>({
   await page.getByRole('heading',{name:'공유할 문서, 함께 준비해요',exact:true}).waitFor();
   assert.equal(count('delete'),2);
   assert.deepEqual(errors,[]);assert.deepEqual(external,[]);
-  console.log(JSON.stringify({passed:true,autoGenerate:true,reuseValidated:true,metadataRebuild:true,noRetryLoop:true,explicitRetry:true,unreviewedBlocked:true,downloadAcknowledgement:true,restartClearsWorkspace:true,failedRestartPreservesWorkspace:true,renderCount:count('render'),externalRequests:external.length,browserErrors:errors.length}));
+  console.log(JSON.stringify({passed:true,autoGenerate:true,reuseValidated:true,metadataRebuild:true,noRetryLoop:true,explicitRetry:true,optionalReview:true,unresolvedBlocked:true,downloadAcknowledgement:true,restartClearsWorkspace:true,failedRestartPreservesWorkspace:true,renderCount:count('render'),externalRequests:external.length,browserErrors:errors.length}));
  }finally{release?.();await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -22,6 +22,8 @@
   --ui-mask-edit: rgba(15, 23, 42, 0.20);
   --ui-mask-edit-pdf: rgba(15, 23, 42, 0.22);
   --ui-mask-edit-sample: rgba(0, 0, 0, 0.18);
+  --ui-detection-highlight: rgba(250, 204, 21, 0.38);
+  --ui-pdf-delete: #ffffff;
 }
 
 @theme {

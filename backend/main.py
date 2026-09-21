@@ -366,7 +366,7 @@ async def plan_job(jid: str, request: Request):
 
 @app.post("/jobs/{jid}/{action}")
 async def job_action(jid: str, action: str, request: Request):
-    allowed = {"manual", "resolve", "context", "render", "ack", "auto-export", "ai-review", "retry-analysis"}
+    allowed = {"manual", "resolve", "context", "render", "ack", "auto-export", "ai-review", "retry-analysis", "prepare-export"}
     if action not in allowed:
         raise StoreError(404, "ACTION_NOT_FOUND", "알 수 없는 작업입니다.")
     try:

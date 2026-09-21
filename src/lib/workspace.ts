@@ -198,7 +198,7 @@ export class WorkspaceController {
     if (this.snapshot.busy) throw new Error('작업 중입니다.');
     if (!this.creds || !this.snapshot.job) throw new Error('작업 정보가 없습니다.');
     if (!this.snapshot.job.aiEnabled || this.snapshot.job.upstageReanalysisRequired) throw new Error('이전 작업은 자동 전송하지 않습니다. 문서를 새로 올려 Upstage 분석을 시작해 주세요.');
-    if (['render', 'ack', 'auto-export', 'ai-review'].includes(action) && !isUpstageComplete(this.snapshot.job)) {
+    if (['render', 'ack', 'auto-export', 'ai-review', 'prepare-export'].includes(action) && !isUpstageComplete(this.snapshot.job)) {
       throw new Error('Upstage 분석을 완료한 뒤 내보낼 수 있습니다. 가림 검토에서 AI 검토를 다시 실행해 주세요.');
     }
     if (action === 'auto-export' && payload.mode !== 'ai_automatic') throw new Error('AI 추천 자동 적용만 사용할 수 있습니다.');

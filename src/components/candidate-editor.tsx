@@ -3,9 +3,11 @@
 import { Candidate, Method, PII_LABELS, Suggestion, METHOD_LABELS } from '@/lib/service';
 import type { Mask } from '@/lib/masking';
 import { presetsFor, maskedText, validPartial, partialDisclosureHint } from '@/lib/masking';
-import { followingTargets, previousChoice } from '@/lib/repeat-decisions';
+import { followingTargets } from '@/lib/repeat-decisions';
+import {isUserDecision} from '@/lib/review-flow';
 import { PartialEditor } from '@/components/partial-editor';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import type {PreviewDecision} from '@/lib/review-preview';
 
 function isNativeKeyTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false;
@@ -17,29 +19,48 @@ export function CandidateEditor({
   all,
   busy,
   onSave,
-  onClose,
   onNavigate,
+  onDone,
+  keyboardMode,
+  onKeyboardModeChange: setKeyboardMode,
   suggestion,
+  onPreviewChange,
+  onPreviewStart,
 }: {
   candidate: Candidate;
   all: Candidate[];
   busy: boolean;
   onSave: (decisions: { id: string; method: Method; mask: Mask; confirmed: boolean }[]) => Promise<unknown>;
-  onClose: () => void;
+  onDone: () => void;
+  keyboardMode: boolean;
+  onKeyboardModeChange: (enabled: boolean) => void;
   onNavigate?: (kind: 'occurrence' | 'group', reverse: boolean) => void;
   suggestion?: Suggestion;
+  onPreviewChange?: (decisions: PreviewDecision[], valid: boolean) => void;
+  onPreviewStart?: () => void;
 }) {
-  const inherited = previousChoice(candidate, all);
-  const initial = inherited ?? candidate;
+  const initial = candidate;
   const [method, setMethod] = useState<Method>(initial.method);
   const [mask, setMask] = useState<Mask>(initial.mask);
   const [presetId, setPresetId] = useState<string | null>(() => initial.method === 'partial' ? presetsFor(candidate.type, candidate.value).find(p => JSON.stringify(p.mask) === JSON.stringify(initial.mask))?.id ?? null : null);
   const [scope, setScope] = useState<'following' | 'one' | 'sameValue' | 'sameType'>('following');
-  const [partialOpen, setPartialOpen] = useState(initial.method === 'partial' && !inherited);
+  const [partialOpen, setPartialOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [keyboardMode, setKeyboardMode] = useState(true);
   const [keyboardNotice, setKeyboardNotice] = useState('');
+  const savedKey = JSON.stringify([initial.method, initial.mask, candidate.confirmed, candidate.decisionSource]);
+  const [previousSavedKey, setPreviousSavedKey] = useState(savedKey);
+  // External updates (including bulk actions) replace the saved baseline without resetting the user's scope.
+  if (savedKey !== previousSavedKey) {
+    setPreviousSavedKey(savedKey);
+    setMethod(initial.method); setMask(initial.mask);
+    setPresetId(initial.method === 'partial' ? presetsFor(candidate.type, candidate.value).find(p => JSON.stringify(p.mask) === JSON.stringify(initial.mask))?.id ?? null : null);
+    setPartialOpen(false);
+  }
+  const partialSnapshot = useRef<{method: Method; mask: Mask; presetId: string | null}>({method: initial.method, mask: initial.mask, presetId});
+  const previewPartial = useCallback((nextMask: Mask, nextPreset: string | null) => {
+    setMask(nextMask); setPresetId(nextPreset);
+  }, []);
 
   const rootRef = useRef<HTMLDivElement>(null);
   const savingLockRef = useRef(false);
@@ -79,19 +100,19 @@ export function CandidateEditor({
     })())));
 
   const invalidReason = (() => {
-    if (!candidate.locationResolved) return '선택한 후보의 위치가 확인되지 않아 저장할 수 없습니다.';
+    if (!candidate.locationResolved) return '먼저 이 정보가 있는 원문 위치를 연결해 주세요.';
     if (method === 'partial' && presetId) {
       for (const t of targets.included) {
         const ps = presetsFor(t.type, t.value);
         const p = ps.find(p => p.id === presetId);
-        if (!p) return `대상 값 "${t.value}"(타입: ${t.type})에 프리셋 "${presetId}"가 없습니다.`;
-        if (!validPartial(t.value, p.mask)) return `대상 값 "${t.value}"에 프리셋 마스크가 유효하지 않습니다.`;
+        if (!p) return `“${t.value}”에는 이 방법을 쓸 수 없어요. 적용 위치를 줄이거나 다른 방법을 골라 주세요.`;
+        if (!validPartial(t.value, p.mask)) return `“${t.value}”에 맞는 가림 방법을 다시 골라 주세요.`;
       }
     }
-    if (method === 'partial' && !presetId && !validPartial(candidate.value, mask)) return '프리셋을 선택하거나 일부 글자를 가려 주세요';
+    if (method === 'partial' && !presetId && !validPartial(candidate.value, mask)) return '가릴 방법이나 글자를 선택해 주세요.';
     if (method === 'partial' && !presetId) {
       for (const t of targets.included) {
-        if (t.value !== candidate.value) return `값이 다른 대상 "${t.value}"에는 선택한 마스크 범위를 복사할 수 없습니다. 프리셋을 선택하거나 같은 값의 모든 위치으로 맞춰주세요.`;
+        if (t.value !== candidate.value) return `직접 고른 글자는 같은 내용에만 적용할 수 있어요. 적용 위치를 바꿔 주세요.`;
       }
     }
     return null;
@@ -105,13 +126,22 @@ export function CandidateEditor({
   });
   const hasUnconfirmedChanges = decisions.some((decision, index) => {
     const saved = targets.included[index];
-    return !saved.confirmed || saved.method !== decision.method || JSON.stringify(saved.mask) !== JSON.stringify(decision.mask);
+    return saved.method !== decision.method || JSON.stringify(saved.mask) !== JSON.stringify(decision.mask);
   });
+  const previewJSON = JSON.stringify(candidate.locationResolved ? decisions.filter((decision, index) => {
+    if (method !== 'partial') return true;
+    const target = targets.included[index];
+    return presetId ? validPartial(target.value, decision.mask) : target.value === candidate.value;
+  }) : []);
+  const previewValid = candidate.locationResolved && !invalidReason && targets.included.length > 0;
+  useEffect(() => {
+    onPreviewChange?.(JSON.parse(previewJSON) as PreviewDecision[], previewValid);
+  }, [previewJSON, previewValid, onPreviewChange]);
 
   const saveDecisions = async (): Promise<boolean> => {
     if (!canSave || savingLockRef.current) return false;
     if (!hasUnconfirmedChanges) {
-      setKeyboardNotice('이미 확정한 선택입니다. ↓ 또는 Tab으로 이동하세요.');
+      setKeyboardNotice('현재 설정을 그대로 사용합니다.');
       return true;
     }
     savingLockRef.current = true;
@@ -120,7 +150,7 @@ export function CandidateEditor({
     setKeyboardNotice('');
     try {
       await onSave(decisions);
-      setKeyboardNotice('선택을 확정했습니다. Tab으로 같은 값의 반복 위치부터 차례로 확인하세요.');
+      setKeyboardNotice('변경을 적용했습니다. Tab으로 다음 위치를 볼 수 있어요.');
       return true;
     } catch (e) {
       setError(e instanceof Error ? e.message : '저장 중 오류가 발생했습니다.');
@@ -152,8 +182,8 @@ export function CandidateEditor({
     }
 
     if (e.key === 'Tab' || e.key === 'ArrowDown') {
-      if (hasUnconfirmedChanges || !canSave) {
-        setKeyboardNotice('먼저 Enter로 현재 선택을 확정해 주세요. 선택은 그대로 유지됩니다.');
+      if (!canSave) {
+        setKeyboardNotice('일부 가림 범위를 완성하거나 다른 방법을 선택해 주세요.');
         return;
       }
       onNavigate?.(e.key === 'Tab' ? 'group' : 'occurrence', e.shiftKey);
@@ -174,6 +204,7 @@ export function CandidateEditor({
         : e.key === 'ArrowRight' ? Math.min(1 + maxPresets, current + 1) : parseInt(e.key, 10);
       setKeyboardNotice('');
       if (num === 0 || num === 1) {
+        onPreviewStart?.();
         setMethod(num === 0 ? 'keep' : 'full');
         setMask([]);
         setPresetId(null);
@@ -182,6 +213,7 @@ export function CandidateEditor({
         const idx = num - 2;
         const p = presets[idx];
         if (p) {
+          onPreviewStart?.();
           setMethod('partial');
           setPresetId(p.id);
           setMask(p.mask);
@@ -199,241 +231,119 @@ export function CandidateEditor({
       // Reuse the user's answer only for this exact type/value, respecting explicit overrides.
       const peers = scope === 'one' ? [candidate] : followingTargets(candidate, all);
       await onSave(peers.filter(c => c.locationResolved).map(c => ({ id: c.id, method: choice, mask: [], confirmed: true })));
-      setMethod(choice); setMask([]); setPresetId(null); setPartialOpen(false);
+      setMethod(choice); setMask([]); setPresetId(null); setPartialOpen(false); onPreviewStart?.();
       setKeyboardNotice('답변을 저장했습니다. 이미 직접 확정한 다른 위치의 선택은 보존됩니다.');
     } catch (e) {
       setError(e instanceof Error ? e.message : '답변을 저장하지 못했습니다. 다시 선택해 주세요.');
     } finally { savingLockRef.current = false; setSaving(false); }
   };
 
-  const handleSave = async () => {
-    if (await saveDecisions()) rootRef.current?.focus({preventScroll:true});
-  };
-
-  const renderMaskPreview = (value: string, m: Mask, methodName: Method) => {
-    const codePoints: string[] = [];
-    for (const ch of value) codePoints.push(ch);
-    const spans: React.ReactNode[] = [];
-    for (let i = 0; i < codePoints.length; i++) {
-      const masked = methodName === 'full' || methodName === 'delete' || (methodName === 'partial' && m.some(r => i >= r[0] && i < r[1]));
-      if (masked) {
-        spans.push(<span key={i} className="inline-block" style={{ display: 'inline-block', backgroundColor: 'var(--ui-mask-edit-sample)', color: 'var(--ui-mask-solid)' }}>{codePoints[i]}</span>);
-      } else {
-        spans.push(<span key={i} className="text-slate-800">{codePoints[i]}</span>);
-      }
-    }
-    return (
-      <div className="space-y-1">
-        <div className="text-[10px] text-slate-400">편집 중 · 원문 확인</div><div className="text-sm leading-relaxed">{spans}</div>
-        <div className="text-xs text-slate-600 font-mono break-all">저장 결과 · {methodName === 'delete' ? '(값 삭제)' : maskedText(value, methodName, m)}</div>
-      </div>
-    );
-  };
-
-  const grouped = (() => {
-    const map = new Map<string, Candidate[]>();
-    for (const t of targets.included) {
-      const arr = map.get(t.value) || [];
-      arr.push(t);
-      map.set(t.value, arr);
-    }
-    return map;
-  })();
-
   const disabledAll = busy || saving;
+  const chooseMethod = (choice: Method) => {
+    onPreviewStart?.(); setError(null); setPartialOpen(false);
+    if (choice === 'partial') {
+      if (method !== 'partial' || !validPartial(candidate.value, mask)) {
+        const preset = presets[0];
+        setMask(preset?.mask ?? []); setPresetId(preset?.id ?? null);
+        setPartialOpen(!preset);
+        partialSnapshot.current = {method, mask, presetId};
+      }
+    } else { setMask([]); setPresetId(null); }
+    setMethod(choice);
+  };
+  const sample = method === 'delete' ? '이 내용이 삭제돼요' : maskedText(candidate.value, method, mask);
+  const options = [
+    {method:'full' as const, label:'모두 가리기', hint:'내용을 알아볼 수 없게 가려요'},
+    {method:'partial' as const, label:'일부만 가리기', hint:'필요한 글자만 남겨요'},
+    {method:'keep' as const, label:'그대로 두기', hint:'원문을 그대로 보여줘요'},
+    {method:'delete' as const, label:'내용 삭제하기', hint:'가림 표시 없이 이 내용을 없애요'},
+  ];
 
-  return (
-    <div
-      ref={rootRef}
-      tabIndex={0}
-      onKeyDown={handleKeyDown}
-      className="bg-white rounded-lg border border-slate-200 p-4 space-y-4 outline-none focus:ring-2 focus:ring-blue-500/40"
-      aria-label="개인정보 편집"
-      aria-keyshortcuts={keyboardMode ? 'Enter ArrowLeft ArrowRight ArrowDown Tab 0 1 2 3 4 5 Escape' : undefined}
-    >
-      <div className="flex justify-between items-start">
-        <div>
-          <h2 className="text-sm font-semibold text-slate-800 capitalize">{PII_LABELS[candidate.type]}</h2>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            data-native-keys="true"
-            onClick={() => { setKeyboardMode(true); if (rootRef.current) rootRef.current.focus({preventScroll:true}); }}
-            className={`text-xs px-2 py-1 rounded border ${keyboardMode ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-slate-500 border-slate-300 hover:bg-slate-50'}`}
-          >
-            {keyboardMode ? '키보드 모드 켜짐' : '키보드 모드 켜기'}
-          </button>
-          <button data-native-keys="true" onClick={onClose} className="text-slate-400 hover:text-slate-600 text-sm">닫기</button>
-        </div>
-      </div>
+  return <div ref={rootRef} tabIndex={0} onKeyDown={handleKeyDown}
+    className="rounded-xl border border-slate-200 bg-white p-4 space-y-4 outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+    aria-label="개인정보 편집" aria-keyshortcuts={keyboardMode ? 'Enter ArrowLeft ArrowRight ArrowDown Tab 0 1 2 3 4 5 Escape' : undefined}>
+    <header>
+      <p className="text-xs text-slate-500">{PII_LABELS[candidate.type]} 가림 설정</p>
+      <h2 className="mt-1 text-base font-medium text-slate-900 break-all">{candidate.value}</h2>
+      <p className="mt-1 text-sm text-slate-600">어떻게 보여줄까요?</p>
+    </header>
 
-      <div className="text-base font-medium text-slate-900 break-all">{candidate.value}</div>
-
-      {suggestion && <div className="border border-blue-100 bg-blue-50/60 p-3 text-sm">
-        {suggestion.question ? <section aria-label="AI 확인 질문">
-          <p className="text-xs font-semibold text-blue-800">문서 근거와 공유 상황을 보고 확인이 필요해요</p>
-          <p className="mt-2 font-medium leading-relaxed text-slate-900">{suggestion.question}</p>
-          {suggestion.evidence && <blockquote className="mt-3 border-l-2 border-blue-300 pl-2 text-xs leading-relaxed text-slate-600"><span className="block font-medium">문서 근거</span>{suggestion.evidence}</blockquote>}
-          {candidate.confirmed ? <p role="status" className="mt-3 text-xs font-medium text-blue-800">선택 확정됨 · {METHOD_LABELS[candidate.method]} · 아래에서 다시 수정할 수 있어요.</p> : <>
-            <p className="mt-3 text-xs text-slate-600">답하지 않으면 전체 가림합니다. {scope === 'one' ? '답변은 이 위치에만 적용됩니다.' : '같은 값의 미확정 위치에도 답변을 적용합니다. 이미 직접 확정한 위치는 보존합니다.'}</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button type="button" data-native-keys="true" disabled={disabledAll || !candidate.locationResolved} onClick={() => void answerQuestion('full')} className="min-h-11 border border-blue-600 bg-blue-600 px-3 text-xs font-medium text-white disabled:opacity-40">아니요, 전체 가림</button>
-              <button type="button" data-native-keys="true" disabled={disabledAll || !candidate.locationResolved} onClick={() => void answerQuestion('keep')} className="min-h-11 border border-slate-300 bg-white px-3 text-xs font-medium text-slate-700 disabled:opacity-40">네, 그대로 유지</button>
-            </div>
-          </>}
-        </section> : <>
-          <div className="flex items-start justify-between gap-3"><span className="font-medium text-blue-800">{suggestion.recommendation ? `${suggestion.source === 'local_rules' ? '이전 규칙 제안' : 'AI 판단'} · ${METHOD_LABELS[suggestion.recommendation]}` : 'AI 검토'}</span>
-            {suggestion.type === 'recommendation' && (suggestion.recommendation === 'full' || suggestion.recommendation === 'keep') && <button type="button" data-native-keys="true" disabled={disabledAll || !candidate.locationResolved} className="shrink-0 border border-blue-200 bg-white px-3 py-1.5 text-xs font-medium text-blue-700 disabled:opacity-40" onClick={() => {setMethod(suggestion.recommendation!); setMask([]); setPresetId(null); setPartialOpen(false);}}>판단 적용</button>}
-          </div>
-          <p className="mt-2 text-xs leading-relaxed text-slate-600">{suggestion.reason || suggestion.content}</p>
-          {suggestion.recommendation === 'partial' && <p className="mt-2 text-xs text-amber-800">이전 방식의 일부 가림 추천입니다. 가림 방법은 아래에서 직접 선택해 주세요. 바로 받기에서는 미확정 항목을 전체 가림합니다.</p>}
-          {suggestion.evidence && <details className="mt-2 text-xs text-slate-500"><summary className="cursor-pointer">판단에 사용한 원문</summary><blockquote className="mt-2 border-l-2 border-blue-200 pl-2">{suggestion.evidence}</blockquote></details>}
-        </>}
-      </div>}
-
-      <div className="flex flex-wrap gap-1.5">
-        <button
-          key="1"
-          onClick={() => { setMethod('full'); setPresetId(null); setPartialOpen(false); }}
-          disabled={disabledAll}
-          className={`max-w-full min-w-0 px-3 py-1.5 text-sm rounded-md border flex items-center gap-1.5 ${
-            method === 'full' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
-          } ${disabledAll ? 'opacity-50 cursor-not-allowed' : ''}`}
-          aria-pressed={method === 'full' && presetId === null}
-        >
-          <span className="inline-flex w-5 h-5 justify-center bg-slate-100 text-slate-700 rounded text-xs font-mono font-bold">1</span>
-          전체 가림
-        </button>
-        {presets.slice(0, 4).map((p, idx) => {
-          const num = idx + 2;
-          const preview = maskedText(candidate.value, 'partial', p.mask);
-          return (
-            <button
-              key={p.id}
-              onClick={() => { setMethod('partial'); setPresetId(p.id); setMask(p.mask); setPartialOpen(false); }}
-              disabled={disabledAll}
-              className={`max-w-full min-w-0 px-3 py-1.5 text-sm rounded-md border flex items-center gap-1.5 ${
-                presetId === p.id && method === 'partial' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
-              } ${disabledAll ? 'opacity-50 cursor-not-allowed' : ''}`}
-              aria-pressed={presetId === p.id && method === 'partial'}
-            >
-              <span className="inline-flex w-5 h-5 justify-center bg-slate-100 text-slate-700 rounded text-xs font-mono font-bold">{num}</span>
-              <span className="min-w-0 text-left break-all"><span className="block text-xs opacity-80">{p.label}</span><span className="block font-mono text-sm">{preview}</span></span>
-            </button>
-          );
-        })}
-      </div>
-
-      <p className="text-xs leading-relaxed text-slate-500">{partialDisclosureHint(candidate.type)}{presets.length === 0 && ' 자동 일부 가림 대신 직접 범위를 선택할 수 있습니다.'}</p>
-
-      {scope === 'following' && <p className="text-xs leading-relaxed text-blue-700">확정하면 같은 종류·같은 값의 미확정 위치에도 적용합니다. 직접 확정한 다른 위치는 보존합니다.</p>}
-      {inherited && !candidate.confirmed && <p className="text-xs leading-relaxed text-slate-600">이전에 같은 정보에 확정한 방법을 불러왔습니다. Enter로 적용하세요.</p>}
-
-      <details className="group">
-        <summary className="text-xs text-slate-500 cursor-pointer hover:text-slate-700 select-none">적용 범위</summary>
-        <div className="flex flex-wrap gap-4 pt-2 border-t border-slate-100" data-native-keys="true">
-          {(['following', 'one', 'sameValue', 'sameType'] as const).map(key => (
-            <label key={key} className="flex items-center gap-1.5 text-sm text-slate-700">
-              <input type="radio" name="scope" value={key} checked={scope === key} onChange={() => setScope(key)} className="text-blue-600" disabled={disabledAll} />
-              {key === 'following' ? '같은 값의 미확정 위치 (기본)' : key === 'one' ? '이 위치만' : key === 'sameValue' ? '같은 값의 모든 위치' : '같은 개인정보 종류'}
-            </label>
-          ))}
-        </div>
-      </details>
-
-      <div className="text-xs text-slate-500">
-        영향받을 위치: {targets.included.length}개
-        {targets.excluded > 0 && <span className="text-slate-400"> (위치 미확인 제외: {targets.excluded})</span>}
-      </div>
-
-      {targets.included.length > 0 ? (
-        <div className="space-y-2 max-h-48 overflow-y-auto">
-          {Array.from(grouped.entries()).map(([value, cts]) => {
-            const t = cts[0];
-            const tMask: Mask = (() => {
-              if (method === 'partial') {
-                if (presetId) {
-                  const ps = presetsFor(t.type, t.value);
-                  const p = ps.find(p => p.id === presetId);
-                  return p ? p.mask : [];
-                }
-                return t.value === candidate.value ? mask : [];
-              }
-              return [];
-            })();
-            return (
-              <div key={value} className="text-xs bg-slate-50 rounded px-2 py-1">
-                <div className="text-slate-400">{cts.length}곳에 적용</div>
-                {renderMaskPreview(value, tMask, method)}
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <p className="text-xs text-slate-400">영향받을 위치가 없습니다.</p>
-      )}
-
-      <div className="flex gap-2">
-        <button
-          onClick={() => { setMethod('delete'); setPresetId(null); setPartialOpen(false); }}
-          disabled={disabledAll}
-          className={`px-3 py-1.5 text-sm rounded-md border ${
-            method === 'delete' ? 'bg-slate-600 text-white border-slate-600' : 'bg-white text-slate-500 border-slate-300 hover:bg-slate-50'
-          } ${disabledAll ? 'opacity-50 cursor-not-allowed' : ''}`}
-        >
-          삭제
-        </button>
-        <button
-          onClick={() => { setMethod('keep'); setPresetId(null); setPartialOpen(false); }}
-          disabled={disabledAll}
-          aria-pressed={method === 'keep'}
-          className={`max-w-full min-w-0 px-3 py-1.5 text-sm rounded-md border flex items-center gap-1.5 ${
-            method === 'keep' ? 'bg-slate-600 text-white border-slate-600' : 'bg-white text-slate-500 border-slate-300 hover:bg-slate-50'
-          } ${disabledAll ? 'opacity-50 cursor-not-allowed' : ''}`}
-        >
-          <span className="inline-flex w-5 h-5 justify-center bg-slate-100 text-slate-700 rounded text-xs font-mono font-bold">0</span>
-          유지
-        </button>
-      </div>
-
-      {method === 'partial' && partialOpen && (
-        <div data-native-keys="true">
-          <PartialEditor
-            candidate={{ ...candidate, mask }}
-            disabled={busy || saving}
-            onApply={(m, pid) => { setMask(m); setPresetId(pid); setPartialOpen(false); }}
-            onCancel={() => setPartialOpen(false)}
-          />
-        </div>
-      )}
-
-      {!partialOpen && (
-        <button onClick={() => { setMethod('partial'); setPartialOpen(true); }} className="text-sm text-blue-600 hover:text-blue-700" disabled={disabledAll}>
-          직접 선택하여 수정
-        </button>
-      )}
-
-      {invalidReason && <p className="text-xs text-red-600">{invalidReason}</p>}
-
-      <div className="text-xs text-slate-400 bg-slate-50 rounded px-2 py-1 text-center">
-        <p>← → 방법 선택 · Enter 확정</p><p className="mt-1">Tab 다음 위치 · ↓ 같은 종류</p>
-        <p className="mt-1">0 유지 · 1 전체 가림{maxPresets > 0 && <> · 2{maxPresets > 1 ? `–${maxPresets + 1}` : ''} 일부 가림</>}</p>
-        <p className="mt-1">Shift+↓ / Shift+Tab 이전 · Esc 키보드 모드 해제</p>
-      </div>
-
-      <button
-        data-native-keys="true"
-        onClick={handleSave}
-        disabled={!canSave || disabledAll}
-        className={`w-full py-2 text-sm rounded-md ${
-          canSave && !disabledAll ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-        }`}
-      >
-        {saving ? '저장 중...' : '선택 확정 · Enter'}
-      </button>
-
-      <p aria-live="polite" className="min-h-4 text-xs text-slate-500">{hasUnconfirmedChanges && keyboardNotice ? '먼저 Enter로 현재 선택을 확정해 주세요. 선택은 그대로 유지됩니다.' : keyboardNotice}</p>
-      {error && !saving && <p className="text-xs text-red-600">{error}</p>}
+    <div className="space-y-2" role="group" aria-label="가림 방법">
+      {options.map(option=><button key={option.method} type="button" disabled={disabledAll}
+        aria-pressed={method===option.method} onClick={()=>chooseMethod(option.method)}
+        className={`flex min-h-14 w-full items-center gap-3 rounded-lg border px-3 py-2 text-left disabled:opacity-50 ${method===option.method?'border-blue-600 bg-blue-50':'border-slate-200 hover:bg-slate-50'}`}>
+        <span aria-hidden="true" className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-xs ${method===option.method?'border-blue-600 bg-blue-600 text-white':'border-slate-300 text-transparent'}`}>✓</span>
+        <span><span className="block text-sm font-semibold text-slate-900">{option.label}</span><span className="block text-xs text-slate-500">{option.hint}</span></span>
+      </button>)}
     </div>
-  );
+
+    {method==='partial'&&<section aria-label="일부 가림 방법" className="space-y-3 border-l-2 border-blue-100 pl-3">
+      {presets.length>0&&<div className="flex flex-wrap gap-2">{presets.slice(0,4).map(p=><button key={p.id} type="button" disabled={disabledAll}
+        aria-pressed={presetId===p.id} onClick={()=>{setMask(p.mask);setPresetId(p.id);setPartialOpen(false);onPreviewStart?.();}}
+        className={`min-w-0 flex-1 rounded-lg border p-2 text-left disabled:opacity-50 ${presetId===p.id?'border-blue-500 bg-blue-50':'border-slate-200 bg-white'}`}>
+        <span className="block text-xs text-slate-600">{p.label.split(' · ')[0]}</span>
+        <span className="mt-1 block break-all text-sm font-semibold text-slate-900">{maskedText(candidate.value,'partial',p.mask)}</span>
+      </button>)}</div>}
+      {!partialOpen&&<button type="button" disabled={disabledAll} className="min-h-9 text-xs font-medium text-blue-700" onClick={()=>{
+        partialSnapshot.current={method,mask,presetId};setPartialOpen(true);onPreviewStart?.();
+      }}>가릴 글자 직접 고르기</button>}
+      {partialOpen&&<div data-native-keys="true"><PartialEditor candidate={{...candidate,mask}} disabled={disabledAll} onPreview={previewPartial}
+        onApply={(m,pid)=>{setMask(m);setPresetId(pid);setPartialOpen(false);}}
+        onCancel={()=>{const prior=partialSnapshot.current;setMethod(prior.method);setMask(prior.mask);setPresetId(prior.presetId);setPartialOpen(false);}}/></div>}
+    </section>}
+
+    <section aria-label="선택한 가림 결과" aria-live="polite" className="rounded-lg bg-slate-50 px-3 py-3">
+      <p className="text-xs text-slate-500">이렇게 보여요</p>
+      <p className="mt-1 break-all text-lg font-semibold text-slate-900">{sample}</p>
+      {method==='partial'&&<p className="mt-2 text-xs leading-relaxed text-slate-500">{partialDisclosureHint(candidate.type)}</p>}
+    </section>
+
+    {invalidReason&&<p role="status" className="text-xs text-amber-700">{invalidReason}</p>}
+    {error&&<p role="alert" className="text-sm text-red-600">{error}</p>}
+    <div className="sticky bottom-0 z-10 space-y-2 border-t border-white bg-white py-2">
+      <button type="button" data-native-keys="true" onClick={onDone} disabled={disabledAll||!previewValid}
+        className="min-h-11 w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40">{disabledAll?'저장 중…':'완료 · 목록으로'}</button>
+      <p className="text-center text-xs text-slate-500">{targets.included.length}곳에 적용 · 목록으로 돌아가도 저장돼요</p>
+    </div>
+
+    <details className="border-t border-slate-100 pt-3">
+      <summary className="cursor-pointer text-xs text-slate-600">적용 위치 바꾸기 · {targets.included.length}곳</summary>
+      <div className="mt-3 space-y-3" data-native-keys="true">
+        {(['following','one','sameValue','sameType'] as const).map(key=><label key={key} className="flex items-start gap-2 text-xs leading-relaxed text-slate-700">
+          <input type="radio" name="scope" className="mt-0.5" checked={scope===key} disabled={disabledAll} onChange={()=>{setScope(key);onPreviewStart?.();}}/>
+          {key==='following'?'같은 정보에 함께 적용 (기본)':key==='one'?'이 위치만':key==='sameValue'?'같은 정보의 모든 위치':`모든 ${PII_LABELS[candidate.type]}에 적용`}
+        </label>)}
+        <p className="text-xs text-slate-500">{scope==='following'?'다른 위치에서 직접 정한 설정은 바꾸지 않아요.':scope==='sameValue'||scope==='sameType'?'직접 정한 설정도 선택한 방법으로 바뀝니다.':'선택한 한 곳만 바꿔요.'}</p>
+        {targets.excluded>0&&<p className="text-xs text-amber-700">위치가 연결되지 않은 {targets.excluded}곳은 제외했어요.</p>}
+        {scope==='sameType'&&<ul className="max-h-32 space-y-1 overflow-auto text-xs text-slate-600">{decisions.map(d=>{
+          const target=all.find(c=>c.id===d.id)!;
+          return <li key={d.id} className="break-all">{target.value} → {d.method==='delete'?'삭제':maskedText(target.value,d.method,d.mask)}</li>;
+        })}</ul>}
+      </div>
+    </details>
+
+    {suggestion&&<details className="border-t border-slate-100 pt-3">
+      <summary className="cursor-pointer text-xs text-slate-600">{suggestion.question?'AI의 추가 질문 · 선택 사항':'AI 판단 살펴보기'}</summary>
+      <section aria-label="AI 확인 질문" className="mt-3 space-y-3 rounded-lg bg-blue-50 p-3 text-xs leading-relaxed text-slate-700">
+        <p>{suggestion.question||suggestion.reason||suggestion.content}</p>
+        {suggestion.evidence&&<blockquote className="border-l-2 border-blue-200 pl-2 text-slate-500">{suggestion.evidence}</blockquote>}
+        {suggestion.question&&!isUserDecision(candidate)?<>
+          <p>답변은 선택 사항이에요. 현재 선택한 가림 방법으로도 진행할 수 있어요.</p>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" data-native-keys="true" disabled={disabledAll||!candidate.locationResolved} onClick={()=>void answerQuestion('full')} className="min-h-10 rounded border border-blue-300 bg-white px-3 disabled:opacity-40">아니요, 모두 가리기</button>
+            <button type="button" data-native-keys="true" disabled={disabledAll||!candidate.locationResolved} onClick={()=>void answerQuestion('keep')} className="min-h-10 rounded border border-blue-300 bg-white px-3 disabled:opacity-40">네, 그대로 두기</button>
+          </div>
+        </>:<p>{isUserDecision(candidate)?'직접 설정':'AI 제안'} · {METHOD_LABELS[isUserDecision(candidate)?candidate.method:suggestion.recommendation??candidate.method]}</p>}
+      </section>
+    </details>}
+
+    <details className="border-t border-slate-100 pt-3">
+      <summary className="cursor-pointer text-xs text-slate-600">추가 기능</summary>
+      <div className="mt-3 space-y-4" data-native-keys="true">
+        <label className="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" checked={keyboardMode} onChange={e=>setKeyboardMode(e.target.checked)}/>키보드 단축키 사용</label>
+        {keyboardMode&&<div className="space-y-1 text-xs text-slate-500"><p>0 그대로 두기 · 1 모두 가리기{maxPresets>0&&<> · 2{maxPresets>1?`–${1+maxPresets}`:''} 일부 가림</>}</p><p>← → 방법 선택 · Enter 변경 저장</p><p>Tab 다음 위치 · ↓ 같은 종류 · Shift와 함께 누르면 이전</p><p>Esc 단축키 끄기</p><button type="button" onClick={()=>rootRef.current?.focus({preventScroll:true})} className="min-h-9 font-medium text-blue-700">단축키로 편집하기</button></div>}
+      </div>
+    </details>
+    {keyboardNotice&&<p aria-live="polite" className="text-xs text-slate-500">{keyboardNotice}</p>}
+  </div>;
 }

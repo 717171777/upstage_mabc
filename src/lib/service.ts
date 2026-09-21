@@ -242,7 +242,7 @@ export async function getJob(id: string, token: string): Promise<Job> {
 export async function mutateJob(
   id: string,
   token: string,
-  action: 'plan' | 'manual' | 'resolve' | 'context' | 'render' | 'ack' | 'auto-export' | 'ai-review' | 'retry-analysis',
+  action: 'plan' | 'manual' | 'resolve' | 'context' | 'render' | 'ack' | 'auto-export' | 'ai-review' | 'retry-analysis' | 'prepare-export',
   payload: Record<string, unknown>,
 ): Promise<Job> {
   const method = action === 'plan' ? 'PATCH' : 'POST';
