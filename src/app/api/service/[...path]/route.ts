@@ -254,7 +254,7 @@ async function proxy(request: NextRequest, params: Promise<{ path: string[] }>):
       cache: 'no-store',
       redirect: 'manual'
     });
-  } catch (err: unknown) {
+  } catch {
     if (combined.aborted) {
       return errorResponse(504, koreanMessage(504));
     }

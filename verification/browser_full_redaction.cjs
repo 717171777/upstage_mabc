@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
 // Synthetic service responses; real page interactions, no external requests.
 const {chromium, expect} = require('playwright/test');
 const assert = require('node:assert/strict');

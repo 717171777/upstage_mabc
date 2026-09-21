@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { Sparkles, Zap } from 'lucide-react'
 
 interface AiToggleProps {

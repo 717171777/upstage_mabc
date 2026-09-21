@@ -9,6 +9,7 @@ SINGLES=('package.json','package-lock.json','next.config.ts','tsconfig.json','ne
  'postcss.config.mjs','eslint.config.mjs','Dockerfile','.dockerignore','.gitignore','AGENTS.md',
  'Dockerfile.backend','Dockerfile.backend.dockerignore','CLAUDE-DEPLOYMENT.md',
  'VERIFICATION-2026-09-21.md',
+ 'DETECTION-GAPS-2026-09-21.md',
  'START-HERE.md','IMPLEMENTATION-STATUS.md','SERVICE-RUNTIME-POLICY.md',
  'PRD-IMPLEMENTATION-ANCHOR.md','REVIEW-AND-AUTO-COPY-2026-09-16.md','RESUMABLE-ANALYSIS-2026-09-16.md')
 TREES=('src','public','backend','deploy','reference/schemas','fixtures/eval_v0')

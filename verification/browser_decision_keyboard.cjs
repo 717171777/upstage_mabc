@@ -142,6 +142,8 @@ function syntheticJob() {
     await page.keyboard.press('ArrowLeft');
     assert.equal(await editor().getByRole('button', {name:/첫 글자와 도메인 남김/}).getAttribute('aria-pressed'), 'true');
     await page.keyboard.press('ArrowRight');
+    assert.equal(await editor().getByRole('button', {name:/앞 2글자와 도메인 남김/}).getAttribute('aria-pressed'), 'true');
+    await page.keyboard.press('ArrowRight');
     assert.equal(await editor().getByRole('button', {name:/도메인만 남김/}).getAttribute('aria-pressed'), 'true');
     await page.keyboard.press('ArrowRight'); // clamp, no wrap or accidental keep
     assert.equal(await editor().getByRole('button', {name:/도메인만 남김/}).getAttribute('aria-pressed'), 'true');
@@ -307,7 +309,8 @@ function syntheticJob() {
     assert.equal(await page.getByRole('button',{name:'같은 정보 2번째 위치',exact:true}).getAttribute('aria-pressed'),'true');
     // A new matching unconfirmed occurrence receives the preceding partial selection on confirmation.
     job=syntheticJob();await page.reload({waitUntil:'networkidle'});
-    await editor().focus();await page.keyboard.press('2');await confirm();
+    // The middle-only preset now occupies 2; initial-only is 3.
+    await editor().focus();await page.keyboard.press('3');await confirm();
     assert.deepEqual(job.candidates[0].mask,[[1,3]]);
     assert.deepEqual(job.candidates[3].mask,[[1,3]]);
     assert(job.candidates[0].confirmed&&job.candidates[3].confirmed);

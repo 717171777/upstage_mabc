@@ -41,6 +41,16 @@ _NUMERIC = re.compile(r'[0-9]+(?:[ \t-][0-9]+)*')
 _ADDRESS_START = re.compile(r'^(?:\(\d{5}\)\s*)?(?:서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충청|충북|충남|전라|전북|전남|경상|경북|경남|제주)')
 _ADDRESS_DETAIL = re.compile(r'\d+\s*(?:동|호|층|번지)(?:\b|\s|$)')
 _NAME_SUFFIX = re.compile(r'(?:(?:님|씨))?(?:께서|에게는|에게|한테|으로|과|와|은|는|이|가|을|를|의|도)?(?=$|[\s.,，。:;!?()\[\]·/])')
+# Role-grounded Korean names only. A short Hangul word alone is not evidence.
+_PERSON_NAME = r'(?:남궁|황보|제갈|선우|독고|서문|사공|동방|[김이박최정강조윤장임한오서신권황안송전홍유류고문양손배백허남심노하곽성차주우구민진나지엄채원천방공현함변염여추도소석선설마길연위표명기반왕금옥육인맹제모탁국어은편용])[가-힣]{1,3}'
+_NON_PERSON_WORDS = frozenset({'전화', '문의', '작성', '검토', '확인', '정보', '모집', '명단', '미정', '없음', '이름', '성명', '일정', '상담', '지원', '담당', '연락처'})
+_ROLE_NAMES = (
+    re.compile(r'(?<![가-힣A-Za-z0-9_])(?:성명|이름|내담자|상담자|예금주)\s*[:：]?\s+(' + _PERSON_NAME + r')(?=\s*(?:$|[,，)·;|]|부서\b|연락처\b))'),
+    re.compile(r'\(대표\s+(' + _PERSON_NAME + r')\s*\)'),
+    re.compile(r'(?<![가-힣])(?:갑|을|병|정)\s*[:：]\s*(' + _PERSON_NAME + r')(?=\s*(?:$|\((?:생년월일|인|서명)))'),
+    re.compile(r'(?<![가-힣])(?:문의\s*[:：]\s*(?:급여담당\s+)?|급여담당\s+)(' + _PERSON_NAME + r')(?=\s*(?:\(?0\d|내선\s+0\d))'),
+    re.compile(r'가족\((?:모|부|배우자|자녀|형제|자매)\)\s+(' + _PERSON_NAME + r')(?=(?:에게도|에게|은|는)?[\s,])'),
+)
 # Numbered fields have constrained shapes and can be grounded without a colon.
 # Do not extend this to arbitrary names/prose: those still require field evidence.
 _STRUCTURED_INLINE = (
@@ -104,6 +114,11 @@ def _valid_value(typ, value):
     if typ == 'management_id':
         return bool(re.fullmatch(r'(?=.*[0-9])[A-Za-z0-9][A-Za-z0-9_-]{2,63}', value))
     return False
+
+
+def _person_name(value):
+    return (bool(re.fullmatch(_PERSON_NAME, value)) and value not in _NON_PERSON_WORDS
+            and not value.endswith(('회사', '은행', '병원', '센터', '부서', '명단')))
 
 
 def _proof(unit, relation, start=0, end=None):
@@ -175,6 +190,26 @@ def detect_local(path: Path, inspection: dict) -> list[dict]:
 
     for unit in units:
         text = unit.get('text', '')
+        for pattern in _ROLE_NAMES:
+            for match in pattern.finditer(text):
+                start, end = match.span(1)
+                if _person_name(text[start:end]):
+                    # Contact/family wording needs an actual contact candidate;
+                    # avoid interpreting a generic enquiry or family heading.
+                    if ('문의' in match.group() or '급여담당' in match.group() or '가족(' in match.group()) and not any(
+                            c['unitId'] == unit['id'] and c['type'] == 'phone' for c in candidates):
+                        continue
+                    add(unit, 'name', start, end, _proof(unit, 'inline_label', match.start(), start))
+        for match in re.finditer(r'(?<![가-힣])(?:거주지|자택주소|현주소)\s*[:：]?\s+([^;|\n]+)', text):
+            start, end = _trim(text, *match.span(1))
+            if _valid_value('address', text[start:end]):
+                add(unit, 'address', start, end, _proof(unit, 'inline_label', match.start(), start))
+        # A receipt number becomes a person identifier only in a care record.
+        if re.search(r'(?:상담|진료|환자|내담자)\s*(?:일지|기록|접수)', text):
+            for match in re.finditer(r'접수번호\s*[:：]?\s+([A-Za-z0-9][A-Za-z0-9_-]{2,63})(?![A-Za-z0-9_-])', text):
+                start, end = match.span(1)
+                if _valid_value('management_id', text[start:end]):
+                    add(unit, 'management_id', start, end, _proof(unit, 'inline_label', 0, start))
         for typ, pattern in _STRUCTURED_INLINE:
             for match in pattern.finditer(text):
                 start, end = match.span(1)
@@ -236,6 +271,11 @@ def detect_local(path: Path, inspection: dict) -> list[dict]:
                 first['localGroupId'] = first['id']
                 linked['localGroupId'] = first['id']
                 linked['reason'] = '주소 라벨에서 확인한 앞줄과 바로 이어지는 상세 주소입니다. 두 줄을 함께 확인해 주세요.'
+
+    if inspection.get('format') == 'pdf':
+        from .local_pdf_tables import table_fields
+        for unit, typ, start, end, header in table_fields(units, _label_type, _valid_value):
+            add(unit, typ, start, end, _proof(header, 'table_column_header'))
 
     names = {}
     for candidate in candidates:

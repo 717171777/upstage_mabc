@@ -312,8 +312,8 @@ export function presetsFor(type: PiiType, value: string): Preset[] {
     case 'email': {
       const localEnd = emailLocalPartEnd(value);
       if (localEnd !== null) {
-        if (localEnd > 2) addPreset('email_keep2', '앞 2글자와 도메인 남김', [[2, localEnd]]);
         if (localEnd > 1) addPreset('email_first_and_domain', '첫 글자와 도메인 남김', [[1, localEnd]]);
+        if (localEnd > 2) addPreset('email_keep2', '앞 2글자와 도메인 남김', [[2, localEnd]]);
         addPreset('email_local_part', '도메인만 남김', [[0, localEnd]]);
       }
       break;

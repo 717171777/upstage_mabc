@@ -20,7 +20,7 @@ export function getMaskedContent(content: string): string {
       return match.replace(/\d{2}[-.]\d{2}$/, '-**-**')
     })
     // 이름 패턴 (간단한 한글 2~4자) — 참고용
-    .replace(/[가-힣]{2,4}/g, (match) => {
+    .replace(/[가-힣]{2,4}/g, () => {
       return '***'
     })
 }

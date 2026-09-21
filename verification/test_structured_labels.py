@@ -17,7 +17,12 @@ from verification.test_local_detection import docx, paragraph, checked
 def test_explicit_structured_labels(tmp_path, text, kind, value):
     path = docx(tmp_path, paragraph(text))
     found = checked(path, inspect_document(path))
-    assert [(c['type'], c['value']) for c in found] == [(kind, value)]
+    expected = {(kind, value)}
+    # These explicitly labelled names used to be missed; they are now also
+    # expected, with their own exact non-overlapping source ranges.
+    if '예금주 김가람' in text or '성명 김가람' in text or text.startswith('을: 김가람'):
+        expected.add(('name', '김가람'))
+    assert {(c['type'], c['value']) for c in found} == expected
 
 
 @pytest.mark.parametrize('text', [

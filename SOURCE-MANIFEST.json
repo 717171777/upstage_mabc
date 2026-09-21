@@ -17,6 +17,10 @@
       "sha256": "c7c4196e9286f35ebc199028710df7504c910929db78400b683369b0c0617148"
     },
     {
+      "path": "DETECTION-GAPS-2026-09-21.md",
+      "sha256": "1460782b12189adeadc3282cbe91817d48611bb5924fd7ad67850a3291ba1997"
+    },
+    {
       "path": "Dockerfile",
       "sha256": "62a363259a6d8948f1e1e0b326c2d85b7f426496c43fc9b660102f6c4ba8896b"
     },
@@ -54,7 +58,7 @@
     },
     {
       "path": "VERIFICATION-2026-09-21.md",
-      "sha256": "8d2196ab1a440833c5baf37dc3419577c819aae5310e4d618af63d0043f4217a"
+      "sha256": "2eabb0cd7d4cc1990c7fc1532a4535b2c7c4420adf15c099336e2b1699b9b4a9"
     },
     {
       "path": "backend/__init__.py",
@@ -130,7 +134,11 @@
     },
     {
       "path": "backend/local_detection.py",
-      "sha256": "62c35b78dc8870055686dc9d35b07e7fa97b56179f12d26aaf25fbf660a35b20"
+      "sha256": "59e48cab07308002e1035b9e6ae7438a82cf85da4607ff5362cec62e92a8fa09"
+    },
+    {
+      "path": "backend/local_pdf_tables.py",
+      "sha256": "1073752abccb7b4f0ab62de3894ce47f3d0662f165c7e094b0fd36eb74c54ab7"
     },
     {
       "path": "backend/local_policy.py",
@@ -210,7 +218,7 @@
     },
     {
       "path": "eslint.config.mjs",
-      "sha256": "870f1adccecf3051cbcd9fd307cef51d7633cf510979c181a81f4b1797273493"
+      "sha256": "498b0cc0ccf612627370b618afcb1ade2f8198d71afc498004bbe8e229eb4b79"
     },
     {
       "path": "fixtures/eval_v0/docs/case_record-01.pdf",
@@ -326,7 +334,7 @@
     },
     {
       "path": "operations/package_service.py",
-      "sha256": "e01761e2a6ec032677853956933b6a1b92381bb0f8b254549d1f2ee2e3457d2d"
+      "sha256": "7e1a8031bd961ee6f7a26312b72c6172480be6e46c5b5c613062d0a905b9cbe9"
     },
     {
       "path": "package-lock.json",
@@ -370,7 +378,7 @@
     },
     {
       "path": "src/app/api/service/[...path]/route.ts",
-      "sha256": "7e2cd9e8dba270dd2f773576329728aa539fa2845612bc5d3a1940b7b468c4f1"
+      "sha256": "aa2c0d7be8a427ea7a4a2e33eb898d3f103d7189477f3cd4f1f530fa9a9aa19b"
     },
     {
       "path": "src/app/context/page.tsx",
@@ -406,7 +414,7 @@
     },
     {
       "path": "src/components/ai-toggle.tsx",
-      "sha256": "3008815c4e84771458392d86d4ec78d6772ab350236de36c36abe86bbc861965"
+      "sha256": "2dfe128dbe315f9042b72cd0dfb1cc6928df3d4d6ca2b982d080a5b2cfa56652"
     },
     {
       "path": "src/components/candidate-editor.tsx",
@@ -426,7 +434,7 @@
     },
     {
       "path": "src/components/partial-editor.tsx",
-      "sha256": "ab0d8b4084a19d230fca759ba97c3313920d657f60b5a0e29f1f5858016b8fa8"
+      "sha256": "1f5b207ed216dd7b544f011d3b86af377201d75beb8c0505188e3631b6029a8d"
     },
     {
       "path": "src/components/recommendation-progress.tsx",
@@ -462,7 +470,7 @@
     },
     {
       "path": "src/lib/masking.ts",
-      "sha256": "91681267783f4397be66fe7a7ff88f20a01769b55a72a1a6610081a40347bd5d"
+      "sha256": "2018e09c14e2a3237f074dca4a0f6fca1551450b0dc2ebd7a552dc9b676b6922"
     },
     {
       "path": "src/lib/repeat-decisions.ts",
@@ -482,7 +490,7 @@
     },
     {
       "path": "src/utils/documents.ts",
-      "sha256": "54ac7ab9244757168961f0bce01622f34d8f67b782bc5b1d4ca0f5bc0aabedf8"
+      "sha256": "7a5370f448aa4f32da04255b7c5b09039afe7a3d2c9579b30d3c780eed034843"
     },
     {
       "path": "tsconfig.json",
@@ -498,11 +506,11 @@
     },
     {
       "path": "verification/browser_decision_keyboard.cjs",
-      "sha256": "99fecd3aa9d7b4668c03414cb16e0a72c9595a835176d2ac03bba87469d94192"
+      "sha256": "04f24ab3440a1b5a3ba08252a8c97bf598532fd6ef518ae1bf5aa40ddf052426"
     },
     {
       "path": "verification/browser_full_redaction.cjs",
-      "sha256": "5f4aa85f2731ad7502055eba8282916b8ffe64e9363dec329e1fa77d23a4cb17"
+      "sha256": "44cc5bb3b962754417e5e694834aaccb7e8c1fa0fb33b62f0dc2fec7e35e2d6e"
     },
     {
       "path": "verification/email_preset_cases.json",
@@ -533,6 +541,10 @@
       "sha256": "06c7c1ad4597b59d9957957cf86c87a3c9dc39830a3068cd1ce789e579eb7966"
     },
     {
+      "path": "verification/test_detection_gaps.py",
+      "sha256": "bab6a6b01b35613645890103cac3fc049a940412f55e6d4aec893688af45a1f2"
+    },
+    {
       "path": "verification/test_email_presets.py",
       "sha256": "54afcd6e8bfbe0f490b850da69e4f4c4c2e73e95d10f21e249740acf1f10a090"
     },
@@ -554,7 +566,7 @@
     },
     {
       "path": "verification/test_initial_context.py",
-      "sha256": "798f958e64a71b84566e3ace9ede73d5c6e6f2108ee39bfc30ebda513a13f6d2"
+      "sha256": "1f3dcff03fb0d56d8c3565facd2878eb6565ace6dbfb73e64364ca8da5de1be1"
     },
     {
       "path": "verification/test_judge.py",
@@ -618,7 +630,7 @@
     },
     {
       "path": "verification/test_structured_labels.py",
-      "sha256": "9b2e8352136be803eb59eaf49986d704893e509338e91f63cce38d17d7ca7e39"
+      "sha256": "bbaa1da571adf2de694c3ac8c99e6b2cbae1203b9af5f50047f551423fd8d969"
     },
     {
       "path": "verification/test_supervisor.py",

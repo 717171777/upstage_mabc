@@ -110,7 +110,7 @@ def test_same_validation_limits_and_partial_update_preserve_other_fields(isolate
 
 
 @pytest.mark.parametrize('context', [CONTEXT, {'recipient': '불특정 다수', 'purpose': '', 'keepInfo': None}])
-def test_first_analysis_and_sp4_receive_same_context_and_all_candidates(context, isolated, monkeypatch):
+def test_first_analysis_and_configured_model_receive_same_context_and_all_candidates(context, isolated, monkeypatch):
     request = create_args(context)
     case_source = ROOT / 'fixtures/eval_v0/docs/docx-case_record-01.docx'
     request['data'] = base64.b64encode(case_source.read_bytes()).decode()
@@ -141,7 +141,7 @@ def test_first_analysis_and_sp4_receive_same_context_and_all_candidates(context,
     assert seen_judge[0]['context'] == context
     assert seen_judge[0]['documentType'] == 'case_record'
     assert {c['id'] for c in seen_judge[0]['candidates']} == {c['id'] for c in final['candidates']}
-    assert final['analysis']['hermes']['model'] == 'solar-pro4-260806'
+    assert final['analysis']['hermes']['model'] == judge.MODEL
     assert all(c['method'] == 'full' and not c['confirmed'] for c in final['candidates'])
 
 

@@ -105,7 +105,7 @@ export function PartialEditor({candidate, disabled, onApply, onCancel}: Props) {
           const start = Math.min(dragStart, index);
           const end = Math.max(dragStart, index);
           const base = dragSnapshotRef.current || new Set();
-          setSelected(prev => {
+          setSelected(() => {
             const next = new Set(base);
             for (let j = start; j <= end; j++) {
               if (mode === 'hide') next.add(j);
