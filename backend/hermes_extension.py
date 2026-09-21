@@ -21,7 +21,7 @@ from tools.registry import registry  # real pinned Hermes module
 
 NAME = 'garimi_document_operation'
 TOOLSET = 'garimi_document'
-OPERATIONS = ['create', 'get', 'plan', 'manual', 'resolve', 'context', 'render', 'preview', 'page', 'ack', 'download', 'delete', 'auto-export', 'ai-review', 'retry-analysis']
+OPERATIONS = ['create', 'get', 'plan', 'manual', 'resolve', 'context', 'render', 'preview', 'page', 'ack', 'download', 'delete', 'auto-export', 'ai-review', 'retry-analysis', 'prepare-export']
 
 SCHEMA = {
     'type': 'object',
